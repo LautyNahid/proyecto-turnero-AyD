@@ -1,0 +1,299 @@
+// ─── SalePadel — Prisma Schema ───────────────────────────────────────────────
+// Stack: PostgreSQL + Prisma ORM + Next.js App Router
+// Decisiones: ADR-002 (PostgreSQL), ADR-006 (Prisma)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMs ───────────────────────────────────────────────────────────────────
+
+enum EstadoTurno {
+  Disponible
+  Reservado
+  EnCurso
+  Finalizado
+}
+
+enum EstadoLobby {
+  Abierto
+  Confirmado
+  Finalizado
+  Cancelado
+}
+
+enum EstadoSolicitud {
+  Pendiente
+  Aceptada
+  Rechazada
+  Cancelada
+}
+
+enum EstadoNotificacion {
+  Pendiente
+  Enviada
+  Fallida
+}
+
+enum TipoNotificacion {
+  LobbyConfirmado
+  RecordatorioTurno
+  TurnoFinalizado
+  SolicitudRechazada
+  SolicitudAceptada
+  JugadorExpulsado
+  CancelacionLobby
+}
+
+// ─── IDENTITY ────────────────────────────────────────────────────────────────
+
+model Usuario {
+  id_usuario          String      @id 
+  nombre              String
+  apellido            String
+  telefono            String
+  correo_electronico  String   @unique
+
+  // relaciones de rol (tabla por subtipo)
+  jugador             Jugador?
+  empleado            Empleado?
+  admin               Admin?
+
+  // notificaciones recibidas
+  notificaciones      Notificacion[]
+
+  @@map("usuario")
+}
+
+model Jugador {
+  id_usuario            String     @id
+  usuario               Usuario @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+
+  categoria             Int     // rango 1-8 según CDU 18
+  partidos_ganados      Int     @default(0)
+  partidos_jugados      Int     @default(0)
+  ciudad                String
+  penalizaciones        Int     @default(0)
+
+  // métricas calculadas — Pipeline P4
+  reputacion_promedio   Decimal @default(0) @db.Decimal(3, 2)
+  evaluaciones_recibidas Int    @default(0)
+  es_destacado          Boolean @default(false)
+  es_poco_confiable     Boolean @default(false)
+
+  // relaciones
+  reservas              Reserva[]
+  lobbies_creados       Lobby[]          @relation("CreadorLobby")
+  lobby_jugadores       LobbyJugador[]
+  solicitudes           Solicitud[]
+  evaluaciones_dadas    EvaluacionJugador[] @relation("Evaluador")
+  evaluaciones_recibidas_rel EvaluacionJugador[] @relation("Evaluado")
+  evaluaciones_turno    EvaluacionTurno[]
+
+  @@map("jugador")
+}
+
+model Empleado {
+  id_usuario  String     @id
+  usuario     Usuario @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+
+  @@map("empleado")
+}
+
+model Admin {
+  id_usuario  String     @id
+  usuario     Usuario @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+
+  @@map("admin")
+}
+
+// ─── CATÁLOGO ────────────────────────────────────────────────────────────────
+
+model Cancha {
+  id_cancha   Int     @id @default(autoincrement())
+  nro_cancha  Int     @unique
+  activa      Boolean @default(true) // baja lógica — CDU 7
+
+  turnos      Turno[]
+
+  @@map("cancha")
+}
+
+// ─── BOOKING ─────────────────────────────────────────────────────────────────
+
+model Turno {
+  id_turno      Int          @id @default(autoincrement())
+  id_cancha     Int
+  cancha        Cancha       @relation(fields: [id_cancha], references: [id_cancha])
+
+  hora          String       // "HH:MM" — se valida en capa application
+  fecha         DateTime     @db.Date
+  precio        Decimal      @db.Decimal(10, 2)
+  estado_turno  EstadoTurno  @default(Disponible)
+
+  reserva       Reserva?
+  lobby         Lobby?
+  bloqueos      BloqueoHorario[]
+  evaluaciones_turno EvaluacionTurno[]
+
+  // índice compuesto para RNF4 — evitar reservas duplicadas
+  @@unique([id_cancha, fecha, hora])
+  @@map("turno")
+}
+
+model Reserva {
+  id_reserva  Int     @id @default(autoincrement())
+  id_jugador  Int
+  jugador     Jugador @relation(fields: [id_jugador], references: [id_usuario])
+
+  id_turno    Int     @unique  // un turno tiene máximo una reserva
+  turno       Turno   @relation(fields: [id_turno], references: [id_turno])
+
+  creada_en   DateTime @default(now())
+
+  // lobby asociado si la reserva fue creada por matchmaking — CDU 8
+  lobby       Lobby?
+
+  evaluaciones_jugador EvaluacionJugador[]
+
+  @@map("reserva")
+}
+
+model BloqueoHorario {
+  id_bloqueo  Int      @id @default(autoincrement())
+  id_turno    Int
+  turno       Turno    @relation(fields: [id_turno], references: [id_turno])
+
+  motivo      String
+  bloqueado_en DateTime @default(now())
+
+  @@map("bloqueo_horario")
+}
+
+// ─── MATCHMAKING ─────────────────────────────────────────────────────────────
+
+model Lobby {
+  id_lobby      Int         @id @default(autoincrement())
+  id_turno      Int         @unique  // un turno tiene máximo un lobby
+  turno         Turno       @relation(fields: [id_turno], references: [id_turno])
+
+  id_creador    Int
+  creador       Jugador     @relation("CreadorLobby", fields: [id_creador], references: [id_usuario])
+
+  estado_lobby  EstadoLobby @default(Abierto)
+  jugadores_faltantes Int   // entre 1 y 3 — CDU 26
+
+  // vinculación con reserva formal — CDU 8
+  id_reserva    Int?        @unique
+  reserva       Reserva?    @relation(fields: [id_reserva], references: [id_reserva])
+
+  jugadores     LobbyJugador[]
+  solicitudes   Solicitud[]
+
+  @@map("lobby")
+}
+
+// tabla puente N:M Lobby ↔ Jugador
+model LobbyJugador {
+  id_lobby      Int
+  lobby         Lobby   @relation(fields: [id_lobby], references: [id_lobby])
+
+  id_jugador    Int
+  jugador       Jugador @relation(fields: [id_jugador], references: [id_usuario])
+
+  fecha_ingreso DateTime @default(now())
+
+  @@id([id_lobby, id_jugador])
+  @@map("lobby_jugador")
+}
+
+model Solicitud {
+  id_solicitud    Int             @id @default(autoincrement())
+  id_jugador      Int
+  jugador         Jugador         @relation(fields: [id_jugador], references: [id_usuario])
+
+  id_lobby        Int
+  lobby           Lobby           @relation(fields: [id_lobby], references: [id_lobby])
+
+  estado_solicitud EstadoSolicitud @default(Pendiente)
+  creada_en        DateTime        @default(now())
+
+  // un jugador no puede tener dos solicitudes activas al mismo lobby
+  @@unique([id_jugador, id_lobby])
+  @@map("solicitud")
+}
+
+// ─── ENGAGEMENT ──────────────────────────────────────────────────────────────
+
+// CDU 11 — jugador evalúa a sus compañeros post-partido
+model EvaluacionJugador {
+  id_evaluacion Int      @id @default(autoincrement())
+
+  id_evaluador  Int
+  evaluador     Jugador  @relation("Evaluador", fields: [id_evaluador], references: [id_usuario])
+
+  id_evaluado   Int
+  evaluado      Jugador  @relation("Evaluado", fields: [id_evaluado], references: [id_usuario])
+
+  id_reserva    Int
+  reserva       Reserva  @relation(fields: [id_reserva], references: [id_reserva])
+
+  puntaje       Int      // 1-5 estrellas
+  creada_en     DateTime @default(now())
+
+  // un jugador no puede evaluar dos veces al mismo compañero en la misma reserva
+  @@unique([id_evaluador, id_evaluado, id_reserva])
+  @@map("evaluacion_jugador")
+}
+
+// CDU 12 — jugador evalúa el turno
+model EvaluacionTurno {
+  id_evaluacion Int      @id @default(autoincrement())
+
+  id_jugador    Int
+  jugador       Jugador  @relation(fields: [id_jugador], references: [id_usuario])
+
+  id_turno      Int
+  turno         Turno    @relation(fields: [id_turno], references: [id_turno])
+
+  puntaje       Int      // 1-5 estrellas
+  creada_en     DateTime @default(now())
+
+  // un jugador evalúa el turno una sola vez — CDU 12 excepción p
+  @@unique([id_jugador, id_turno])
+  @@map("evaluacion_turno")
+}
+
+// ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+
+model Notificacion {
+  id_notificacion Int                @id @default(autoincrement())
+  id_destinatario String
+  destinatario    Usuario            @relation(fields: [id_destinatario], references: [id_usuario])
+
+  tipo            TipoNotificacion
+  estado          EstadoNotificacion @default(Pendiente)
+  intentos        Int                @default(0)
+  creada_en       DateTime           @default(now())
+  enviada_en      DateTime?          // null hasta que se envíe exitosamente
+
+  @@map("notificacion")
+}
+
+// ─── REPORTING ───────────────────────────────────────────────────────────────
+
+model ReporteSemanal {
+  id_reporte      Int      @id @default(autoincrement())
+  periodo_inicio  DateTime @db.Date
+  periodo_fin     DateTime @db.Date
+  datos_json      Json     // estructura: { canchas, jugadores, metricas_globales }
+  generado_en     DateTime @default(now())
+
+  @@unique([periodo_inicio, periodo_fin])
+  @@map("reporte_semanal")
+}
