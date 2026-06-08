@@ -1,0 +1,1742 @@
+openapi: 3.0.3
+info:
+  title: SalePadel API
+  version: 1.0.0
+  description: >
+    API REST para SalePadel — plataforma de gestión y matchmaking para pádel.
+    Permite reservar canchas, gestionar lobbies, evaluar compañeros y administrar
+    el complejo deportivo.
+
+servers:
+  - url: https://api.salepadel.com/v1
+
+tags:
+  - name: Usuarios
+    description: Perfil deportivo e historial del jugador
+  - name: Canchas
+    description: CRUD de canchas y gestión de precios
+  - name: Turnos
+    description: Disponibilidad y estados de turnos
+  - name: Reservas
+    description: Creación y cancelación de reservas
+  - name: Lobbies
+    description: Creación y gestión de lobbies
+  - name: Solicitudes
+    description: Solicitudes de ingreso a lobbies
+  - name: Evaluaciones
+    description: Evaluación de compañeros post-partido
+  - name: Clima
+    description: Condiciones meteorológicas para un turno
+  - name: Mapas
+    description: Localización de canchas
+  - name: Reportes
+    description: Reportes semanales del complejo
+
+paths:
+
+  # ── USUARIOS ───────────────────────────────────────────────────────────────
+
+  /usuarios/{idUsuario}/perfil:
+    get:
+      summary: Obtener perfil deportivo del jugador 
+      tags: [Usuarios]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idUsuario'
+      responses:
+        '200':
+          description: Perfil deportivo del jugador
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PerfilJugador'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Editar perfil deportivo del jugador 
+      tags: [Usuarios]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idUsuario'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombre:
+                  type: string
+                  example: "Juan"
+                apellido:
+                  type: string
+                  example: "Pérez"
+                telefono:
+                  type: string
+                  example: "+5492914001234"
+                ciudad:
+                  type: string
+                  example: "Bahía Blanca"
+                categoria:
+                  type: string
+                  example: "Intermedio"
+      responses:
+        '200':
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PerfilJugador'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /usuarios/{idUsuario}/agenda:
+    get:
+      summary: Historial de partidos del jugador 
+      tags: [Usuarios]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idUsuario'
+        - in: query
+          name: estado
+          schema:
+            type: string
+            enum: [Reservado, EnCurso, Terminado]
+          description: Filtrar por estado del turno
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Lista paginada de reservas del jugador
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReservaDetalle'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── CANCHAS ────────────────────────────────────────────────────────────────
+
+  /canchas:
+    get:
+      summary: Listar canchas 
+      tags: [Canchas]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Lista paginada de canchas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Cancha'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Crear una nueva cancha 
+      tags: [Canchas]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nroCancha]
+              properties:
+                nroCancha:
+                  type: integer
+                  example: 3
+      responses:
+        '201':
+          description: Cancha creada exitosamente
+          headers:
+            Location:
+              schema:
+                type: string
+              example: /canchas/uuid-456
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Cancha'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Ya existe una cancha con ese número
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: CANCHA_DUPLICADA
+                  message: Ya existe una cancha con ese número.
+
+  /canchas/{idCancha}:
+    get:
+      summary: Obtener detalle de una cancha 
+      tags: [Canchas]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idCancha'
+      responses:
+        '200':
+          description: Detalle de la cancha
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Cancha'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Modificar datos o precio de una cancha 
+      description: >
+        Permite modificar el número y/o el precio base de una cancha.
+        El cambio de precio solo afecta turnos futuros no confirmados .
+      tags: [Canchas]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idCancha'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nroCancha:
+                  type: integer
+                  example: 4
+                precio:
+                  type: number
+                  format: float
+                  example: 4500.00
+      responses:
+        '200':
+          description: Cancha actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Cancha'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Dar de baja lógica una cancha 
+      description: >
+        La baja es lógica — la cancha pasa a estado Inactiva.
+        Si tiene reservas futuras activas, la operación es rechazada .
+      tags: [Canchas]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idCancha'
+      responses:
+        '204':
+          description: Cancha dada de baja lógicamente
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: La cancha tiene reservas futuras activas (RN13)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: CANCHA_CON_RESERVAS_ACTIVAS
+                  message: No se puede dar de baja una cancha con reservas futuras confirmadas.
+
+  /canchas/{idCancha}/ubicacion:
+    get:
+      summary: Obtener ubicación geográfica de la cancha 
+      tags: [Mapas]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idCancha'
+      responses:
+        '200':
+          description: Datos de ubicación obtenidos desde la API de Mapas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      latitud:
+                        type: number
+                        format: float
+                        example: -38.7196
+                      longitud:
+                        type: number
+                        format: float
+                        example: -62.2724
+                      direccion:
+                        type: string
+                        example: "Av. Alem 925, Bahía Blanca"
+                      mapaUrl:
+                        type: string
+                        example: "https://maps.google.com/?q=-38.7196,-62.2724"
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '502':
+          description: Error al consultar la API de Mapas externa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: MAPS_API_ERROR
+                  message: No se pudo obtener la ubicación en este momento.
+
+  # ── TURNOS ─────────────────────────────────────────────────────────────────
+
+  /turnos:
+    get:
+      summary: Listar turnos con filtros 
+      tags: [Turnos]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: idCancha
+          schema:
+            type: string
+            format: uuid
+          description: Filtrar por cancha
+        - in: query
+          name: fecha
+          schema:
+            type: string
+            format: date
+          example: "2026-06-10"
+          description: Filtrar por fecha (YYYY-MM-DD)
+        - in: query
+          name: estado
+          schema:
+            type: string
+            enum: [Disponible, Reservado, EnCurso, Terminado, Bloqueado]
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Lista paginada de turnos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Turno'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /turnos/{idTurno}:
+    get:
+      summary: Obtener detalle de un turno
+      tags: [Turnos]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idTurno'
+      responses:
+        '200':
+          description: Detalle del turno
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Turno'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      summary: Modificar estado de un turno — incluye bloqueo 
+      description: >
+        Permite al administrador cambiar el estado de un turno.
+        Para bloquear un turno por mantenimiento, enviar estado Bloqueado con motivo.
+        No se puede bloquear un turno con reservas activas.
+      tags: [Turnos]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idTurno'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [estado]
+              properties:
+                estado:
+                  type: string
+                  enum: [Disponible, Bloqueado]
+                  example: "Bloqueado"
+                motivo:
+                  type: string
+                  description: Requerido cuando estado es Bloqueado
+                  example: "Mantenimiento de la red"
+      responses:
+        '200':
+          description: Turno actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Turno'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: El turno tiene una reserva activa y no puede bloquearse
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: TURNO_CON_RESERVA_ACTIVA
+                  message: No se puede bloquear un turno que ya tiene una reserva confirmada.
+
+  /turnos/{idTurno}/clima:
+    get:
+      summary: Consultar clima para el horario del turno 
+      tags: [Clima]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idTurno'
+      responses:
+        '200':
+          description: Condición climática prevista para el turno
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      descripcion:
+                        type: string
+                        example: "Parcialmente nublado"
+                      temperatura:
+                        type: number
+                        format: float
+                        example: 18.5
+                      probabilidadLluvia:
+                        type: number
+                        format: float
+                        example: 20.0
+                      viento:
+                        type: number
+                        format: float
+                        example: 15.0
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '502':
+          description: Error al consultar la API de Clima externa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: CLIMA_API_ERROR
+                  message: No se pudo obtener el clima en este momento.
+
+  # ── RESERVAS ───────────────────────────────────────────────────────────────
+
+  /reservas:
+    get:
+      summary: Listar reservas 
+      tags: [Reservas]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: idJugador
+          schema:
+            type: string
+            format: uuid
+          description: Filtrar por jugador (Admin/Empleado o el propio jugador)
+        - in: query
+          name: idCancha
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: fecha
+          schema:
+            type: string
+            format: date
+          example: "2026-06-10"
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Lista paginada de reservas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReservaDetalle'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Realizar una reserva directa 
+      description: >
+        Crea una reserva para el turno indicado. El turno debe estar en estado Disponible.
+        No pueden existir dos reservas para la misma cancha, fecha y horario .
+        No puede haber horarios superpuestos para el mismo jugador .
+      tags: [Reservas]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idTurno]
+              properties:
+                idTurno:
+                  type: string
+                  format: uuid
+                  example: "uuid-turno-001"
+      responses:
+        '201':
+          description: Reserva creada exitosamente
+          headers:
+            Location:
+              schema:
+                type: string
+              example: /reservas/uuid-reserva-001
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ReservaDetalle'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Turno no disponible o reserva duplicada 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: TURNO_NO_DISPONIBLE
+                  message: El turno seleccionado ya no está disponible.
+        '422':
+          description: Horario superpuesto con otra reserva activa del jugador 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: HORARIO_SUPERPUESTO
+                  message: Ya tenés una reserva activa en ese horario.
+
+  /reservas/{idReserva}:
+    get:
+      summary: Obtener detalle de una reserva
+      tags: [Reservas]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idReserva'
+      responses:
+        '200':
+          description: Detalle de la reserva
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ReservaDetalle'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Cancelar una reserva 
+      description: >
+        Cancela la reserva. Si el lobby asociado está Confirmado y quedan menos
+        de 12 horas para el turno, se aplica penalización al jugador .
+      tags: [Reservas]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idReserva'
+      responses:
+        '204':
+          description: Reserva cancelada exitosamente
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: No se puede cancelar un turno en curso o finalizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: RESERVA_NO_CANCELABLE
+                  message: No es posible cancelar un turno que ya está en curso o finalizado.
+
+  # ── LOBBIES ────────────────────────────────────────────────────────────────
+
+  /lobbies:
+    get:
+      summary: Listar lobbies activos con cupos disponibles
+      tags: [Lobbies]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: fecha
+          schema:
+            type: string
+            format: date
+          example: "2026-06-10"
+        - in: query
+          name: idCancha
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Lista paginada de lobbies no confirmados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Lobby'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Crear un lobby a partir de un turno 
+      description: >
+        El jugador creador especifica cuántos jugadores faltan (1, 2 o 3).
+        Si el jugador es Usuario poco confiable (RN11), la operación es rechazada.
+        No puede haber dos lobbies activos con horarios superpuestos para el mismo jugador.
+      tags: [Lobbies]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idTurno, jugadoresFaltantes]
+              properties:
+                idTurno:
+                  type: string
+                  format: uuid
+                  example: "uuid-turno-001"
+                jugadoresFaltantes:
+                  type: integer
+                  minimum: 1
+                  maximum: 3
+                  example: 2
+      responses:
+        '201':
+          description: Lobby creado exitosamente
+          headers:
+            Location:
+              schema:
+                type: string
+              example: /lobbies/uuid-lobby-001
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Lobby'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Jugador bloqueado para abrir lobbies 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: JUGADOR_BLOQUEADO_PARA_LOBBIES
+                  message: Tu cuenta está temporalmente bloqueada para crear lobbies por cancelaciones reiteradas.
+        '409':
+          description: El turno ya tiene un lobby activo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: LOBBY_YA_EXISTE
+                  message: Ya existe un lobby activo para este turno.
+        '422':
+          description: Horario superpuesto con otro lobby activo del jugador 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: HORARIO_SUPERPUESTO
+                  message: Ya tenés un lobby activo en ese horario.
+
+  /lobbies/{idLobby}:
+    get:
+      summary: Obtener detalle de un lobby
+      tags: [Lobbies]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idLobby'
+      responses:
+        '200':
+          description: Detalle del lobby con jugadores actuales
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/LobbyDetalle'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /lobbies/{idLobby}/jugadores/{idJugador}:
+    delete:
+      summary: Expulsar jugador del lobby o darse de baja 
+      description: >
+        Si el lobby está Confirmado y quedan menos de 12hs para el turno, se aplica penalización (RN4).
+      tags: [Lobbies]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idLobby'
+        - in: path
+          name: idJugador
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Jugador removido del lobby
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: No es el organizador ni el propio jugador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: PERMISO_DENEGADO
+                  message: Solo el organizador puede expulsar jugadores.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: El partido ya está en curso o finalizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: LOBBY_NO_MODIFICABLE
+                  message: No se puede modificar un lobby cuyo partido ya inició o finalizó.
+
+  # ── SOLICITUDES ────────────────────────────────────────────────────────────
+
+  /lobbies/{idLobby}/solicitudes:
+    get:
+      summary: Listar solicitudes de ingreso a un lobby
+      tags: [Solicitudes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idLobby'
+        - in: query
+          name: estado
+          schema:
+            type: string
+            enum: [Pendiente, Aceptada, Rechazada, Cancelada]
+      responses:
+        '200':
+          description: Lista de solicitudes del lobby
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Solicitud'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Solicitar ingreso a un lobby 
+      description: >
+        El jugador solicita unirse a un lobby con cupos disponibles.
+        No puede tener horarios superpuestos con otro lobby activo .
+      tags: [Solicitudes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idLobby'
+      responses:
+        '201':
+          description: Solicitud creada exitosamente
+          headers:
+            Location:
+              schema:
+                type: string
+              example: /lobbies/uuid-lobby-001/solicitudes/uuid-solicitud-001
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Solicitud'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Lobby ya confirmado o solicitud duplicada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: LOBBY_SIN_CUPOS
+                  message: El lobby ya está completo o confirmado.
+        '422':
+          description: Horario superpuesto con otro lobby activo del jugador 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: HORARIO_SUPERPUESTO
+                  message: Ya tenés un lobby activo en ese horario.
+
+  /lobbies/{idLobby}/solicitudes/{idSolicitud}:
+    patch:
+      summary: Aceptar o Rechazar una solicitud de ingreso 
+      description: >
+        Solo el organizador puede aceptar o rechazar. Decrementa jugadoresFaltantes.
+        Si llega a 0, el lobby pasa a Confirmado y se crea la Reserva automáticamente .
+      tags: [Solicitudes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idLobby'
+        - $ref: '#/components/parameters/idSolicitud'
+      responses:
+        '200':
+          description: Solicitud aceptada/rechazada — jugador agregado al lobby
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Solicitud'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: No es el organizador del lobby
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: PERMISO_DENEGADO
+                  message: Solo el organizador puede aceptar o rechazar solicitudes.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: El lobby ya está confirmado y no acepta más jugadores
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: LOBBY_CONFIRMADO
+                  message: El lobby ya alcanzó el máximo de 4 jugadores.
+
+
+  # ── EVALUACIONES ───────────────────────────────────────────────────────────
+
+  /reservas/{idReserva}/evaluaciones:
+    post:
+      summary: Evaluar a un compañero de partido 
+      description: >
+        Solo disponible dentro de las 24 horas posteriores al fin del partido .
+        No se puede autoevaluar ni evaluar dos veces al mismo compañero en el mismo partido.
+        Si el promedio supera 4.5 estrellas tras 5 partidos, el jugador pasa a Destacado .
+      tags: [Evaluaciones]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idReserva'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idJugadorEvaluado, puntuacion]
+              properties:
+                idJugadorEvaluado:
+                  type: string
+                  format: uuid
+                puntuacion:
+                  type: number
+                  format: float
+                  minimum: 1
+                  maximum: 5
+                  example: 4.5
+                comentario:
+                  type: string
+                  maxLength: 500
+                  example: "Muy buen nivel, excelente compañero."
+      responses:
+        '201':
+          description: Evaluación registrada exitosamente
+          headers:
+            Location:
+              schema:
+                type: string
+              example: /evaluaciones/uuid-eval-001
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Evaluacion'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Ya existe una evaluación de este jugador en este partido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: EVALUACION_DUPLICADA
+                  message: Ya evaluaste a este jugador en el partido.
+        '422':
+          description: Ventana de 24hs cerrada o intento de autoevaluación 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: VENTANA_EVALUACION_CERRADA
+                  message: El período de evaluación de 24 horas post-partido ha expirado.
+
+  /evaluaciones/{idEvaluacion}:
+    patch:
+      summary: Editar una evaluación existente 
+      description: >
+        Solo el autor puede editar. Respeta la misma ventana de 24 horas .
+      tags: [Evaluaciones]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idEvaluacion'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                puntuacion:
+                  type: number
+                  format: float
+                  minimum: 1
+                  maximum: 5
+                  example: 3.5
+                comentario:
+                  type: string
+                  maxLength: 500
+                  example: "Actualizo mi comentario."
+      responses:
+        '200':
+          description: Evaluación actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Evaluacion'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Ventana de 24hs cerrada (RN8)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: VENTANA_EVALUACION_CERRADA
+                  message: El período de evaluación de 24 horas post-partido ha expirado.
+
+  # ── REPORTES ───────────────────────────────────────────────────────────────
+
+  /reportes/semanal:
+    get:
+      summary: Visualizar reporte semanal 
+      description: Disponible para Admin y Empleado.
+      tags: [Reportes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: semana
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Fecha de inicio de la semana (lunes)
+          example: "2026-06-01"
+      responses:
+        '200':
+          description: Datos del reporte semanal
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ReporteSemanal'
+                  error:
+                    type: string
+                    nullable: true
+                    example: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /reportes/semanal/exportar:
+    get:
+      summary: Exportar reporte semanal en PDF o Excel 
+      tags: [Reportes]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: semana
+          required: true
+          schema:
+            type: string
+            format: date
+          example: "2026-06-01"
+        - in: query
+          name: formato
+          required: true
+          schema:
+            type: string
+            enum: [pdf, excel]
+          example: "pdf"
+      responses:
+        '200':
+          description: Archivo generado para descarga
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────────────────────────────────────
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    idUsuario:
+      in: path
+      name: idUsuario
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    idCancha:
+      in: path
+      name: idCancha
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    idTurno:
+      in: path
+      name: idTurno
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    idReserva:
+      in: path
+      name: idReserva
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    idLobby:
+      in: path
+      name: idLobby
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    idSolicitud:
+      in: path
+      name: idSolicitud
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    idEvaluacion:
+      in: path
+      name: idEvaluacion
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Validación fallida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: VALIDACION_FALLIDA
+              message: Uno o más campos tienen formato inválido.
+
+    Unauthorized:
+      description: Token no enviado o expirado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: TOKEN_INVALIDO
+              message: Autenticación requerida.
+
+    Forbidden:
+      description: Sin permiso para la operación
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: PERMISO_DENEGADO
+              message: No tenés permiso para realizar esta acción.
+
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: RECURSO_NO_ENCONTRADO
+              message: El recurso solicitado no existe.
+
+  schemas:
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: ERROR_CODE
+              description: Código de error en SNAKE_UPPER_CASE
+            message:
+              type: string
+              example: Descripción del error.
+            details:
+              type: string
+              nullable: true
+              description: Información adicional opcional
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 45
+        totalPages:
+          type: integer
+          example: 3
+
+    UsuarioResumen:
+      type: object
+      properties:
+        idUsuario:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+          example: "Juan"
+        apellido:
+          type: string
+          example: "Pérez"
+        correoElectronico:
+          type: string
+          format: email
+        rol:
+          type: string
+          enum: [Jugador, Empleado, Admin]
+
+    PerfilJugador:
+      type: object
+      properties:
+        idUsuario:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+          example: "Juan"
+        apellido:
+          type: string
+          example: "Pérez"
+        categoria:
+          type: string
+          example: "Intermedio"
+        ciudad:
+          type: string
+          example: "Bahía Blanca"
+        partidosJugados:
+          type: integer
+          example: 12
+        partidosGanados:
+          type: integer
+          example: 7
+        penalizaciones:
+          type: integer
+          example: 0
+        esDestacado:
+          type: boolean
+          description: true si promedio > 4.5 estrellas tras 5 partidos (RN9)
+          example: false
+
+    Cancha:
+      type: object
+      properties:
+        idCancha:
+          type: string
+          format: uuid
+        nroCancha:
+          type: integer
+          example: 3
+        estado:
+          type: string
+          enum: [Activa, Inactiva]
+          example: "Activa"
+
+    Turno:
+      type: object
+      properties:
+        idTurno:
+          type: string
+          format: uuid
+        idCancha:
+          type: string
+          format: uuid
+        hora:
+          type: string
+          example: "18:00"
+        fecha:
+          type: string
+          format: date
+          example: "2026-06-10"
+        precio:
+          type: number
+          format: float
+          example: 4500.00
+        estadoTurno:
+          type: string
+          enum: [Disponible, Reservado, EnCurso, Terminado, Bloqueado]
+          example: "Disponible"
+        esAltaDemanda:
+          type: boolean
+          description: true si ocupación > 90% en últimas 4 semanas (RN10)
+          example: false
+
+    ReservaDetalle:
+      type: object
+      properties:
+        idReserva:
+          type: string
+          format: uuid
+        idJugador:
+          type: string
+          format: uuid
+        turno:
+          $ref: '#/components/schemas/Turno'
+        creadaEn:
+          type: string
+          format: date-time
+          example: "2026-06-04T10:00:00Z"
+
+    Lobby:
+      type: object
+      properties:
+        idLobby:
+          type: string
+          format: uuid
+        idTurno:
+          type: string
+          format: uuid
+        idCreador:
+          type: string
+          format: uuid
+        estadoLobby:
+          type: string
+          enum: [NoConfirmado, Confirmado]
+          example: "NoConfirmado"
+        jugadoresFaltantes:
+          type: integer
+          minimum: 0
+          maximum: 3
+          example: 2
+
+    LobbyDetalle:
+      allOf:
+        - $ref: '#/components/schemas/Lobby'
+        - type: object
+          properties:
+            turno:
+              $ref: '#/components/schemas/Turno'
+            jugadores:
+              type: array
+              items:
+                $ref: '#/components/schemas/UsuarioResumen'
+
+    Solicitud:
+      type: object
+      properties:
+        idSolicitud:
+          type: string
+          format: uuid
+        idJugador:
+          type: string
+          format: uuid
+        idLobby:
+          type: string
+          format: uuid
+        estadoSolicitud:
+          type: string
+          enum: [Pendiente, Aceptada, Rechazada, Cancelada]
+          example: "Pendiente"
+
+    Evaluacion:
+      type: object
+      properties:
+        idEvaluacion:
+          type: string
+          format: uuid
+        idReserva:
+          type: string
+          format: uuid
+        idEvaluador:
+          type: string
+          format: uuid
+        idJugadorEvaluado:
+          type: string
+          format: uuid
+        puntuacion:
+          type: number
+          format: float
+          minimum: 1
+          maximum: 5
+          example: 4.5
+        comentario:
+          type: string
+          nullable: true
+          example: "Muy buen nivel."
+        creadaEn:
+          type: string
+          format: date-time
+          example: "2026-06-05T10:00:00Z"
+
+    ReporteSemanal:
+      type: object
+      properties:
+        semana:
+          type: string
+          format: date
+          example: "2026-06-01"
+        totalReservas:
+          type: integer
+          example: 42
+        totalCancelaciones:
+          type: integer
+          example: 5
+        totalLobbiesConfirmados:
+          type: integer
+          example: 18
+        canchasMasDemandadas:
+          type: array
+          items:
+            type: object
+            properties:
+              idCancha:
+                type: string
+                format: uuid
+              nroCancha:
+                type: integer
+              totalReservas:
+                type: integer
+        horariosAltaDemanda:
+          type: array
+          items:
+            type: object
+            properties:
+              hora:
+                type: string
+              ocupacion:
+                type: number
+                format: float
