@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 const navMain = [
   { to: "/", label: "Inicio", icon: LayoutDashboard },
   { to: "/reservar", label: "Reservar turno", icon: CalendarRange },
-  { to: "/lobby", label: "Partidos", icon: Users2 },
+  { to: "/partidos", label: "Mis Partidos", icon: Users2 },
   { to: "/perfil", label: "Mi perfil", icon: User },
   { to: "/notificaciones", label: "Notificaciones", icon: Bell },
 ];
