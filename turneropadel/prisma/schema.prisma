@@ -3,7 +3,8 @@
 // Decisiones: ADR-002 (PostgreSQL), ADR-006 (Prisma)
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
