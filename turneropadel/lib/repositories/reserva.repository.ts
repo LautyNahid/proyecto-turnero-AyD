@@ -1,0 +1,104 @@
+import { Prisma } from "@prisma/client";
+import type { Reserva } from "@prisma/client";
+import { db } from "@/lib/db";
+
+export type ReservaWithRelations = Prisma.ReservaGetPayload<{
+  include: {
+    jugador: {
+      include: {
+        usuario: true;
+      };
+    };
+    turno: {
+      include: {
+        cancha: true;
+      };
+    };
+  };
+}>;
+
+export type CreateReservaData = {
+  id_jugador: string;
+  id_turno: number;
+};
+
+const reservaInclude = {
+  jugador: {
+    include: {
+      usuario: true,
+    },
+  },
+  turno: {
+    include: {
+      cancha: true,
+    },
+  },
+} satisfies Prisma.ReservaInclude;
+
+export interface ReservaRepository {
+  findAll(): Promise<ReservaWithRelations[]>;
+  findById(id_reserva: number): Promise<ReservaWithRelations | null>;
+  findByTurnoId(id_turno: number): Promise<Reserva | null>;
+  create(data: CreateReservaData): Promise<ReservaWithRelations>;
+  delete(id_reserva: number): Promise<ReservaWithRelations>;
+}
+
+export class PrismaReservaRepository implements ReservaRepository {
+  findAll() {
+    return db.reserva.findMany({
+      include: reservaInclude,
+      orderBy: { creada_en: "desc" },
+    });
+  }
+
+  findById(id_reserva: number) {
+    return db.reserva.findUnique({
+      where: { id_reserva },
+      include: reservaInclude,
+    });
+  }
+
+  findByTurnoId(id_turno: number) {
+    return db.reserva.findUnique({
+      where: { id_turno },
+    });
+  }
+
+  create(data: CreateReservaData) {
+    return db.$transaction(async (tx) => {
+      const reserva = await tx.reserva.create({
+        data,
+        include: reservaInclude,
+      });
+
+      await tx.turno.update({
+        where: { id_turno: data.id_turno },
+        data: { estado_turno: "Reservado" },
+      });
+
+      return reserva;
+    });
+  }
+
+  delete(id_reserva: number) {
+    return db.$transaction(async (tx) => {
+      const reserva = await tx.reserva.delete({
+        where: { id_reserva },
+        include: reservaInclude,
+      });
+
+      await tx.turno.update({
+        where: { id_turno: reserva.id_turno },
+        data: { estado_turno: "Disponible" },
+      });
+
+      return reserva;
+    });
+  }
+}
+
+export function isKnownPrismaError(error: unknown, code: string) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === code;
+}
+
+export const reservaRepository = new PrismaReservaRepository();
