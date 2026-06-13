@@ -1,166 +1,244 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AppShell } from "@/components/layout/AppShell";
-import { MapPin, Clock, Cloud, Check, X, UserPlus, Share2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
 
-type Player = {
-  id: number;
-  name: string | null;
-  initials: string;
-  level: string | null;
-  side: string | null;
-  status: "confirmed" | "pending" | "empty";
-  host?: boolean;
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type EstadoBadgeConfig = {
+  label: string;
+  className: string;
 };
 
-const players: Player[] = [
-  { id: 1, name: "Martín R.", initials: "MR", level: "5ta", side: "Drive", status: "confirmed", host: true },
-  { id: 2, name: "Julián L.", initials: "JL", level: "5ta", side: "Revés", status: "confirmed" },
-  { id: 3, name: "Pablo A.", initials: "PA", level: "6ta", side: "Drive", status: "pending" },
-  { id: 4, name: null, initials: "+", level: null, side: null, status: "empty" },
-];
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const requests = [
-  { id: 1, name: "Diego E.", initials: "DE", level: "5ta", side: "Revés" },
-  { id: 2, name: "Tomás P.", initials: "TP", level: "6ta", side: "Drive" },
-];
+const ESTADO_CONFIG: Record<string, EstadoBadgeConfig> = {
+  Abierto:    { label: "Abierto",    className: "bg-lime/20 text-lime-foreground" },
+  Confirmado: { label: "Confirmado", className: "bg-success/15 text-success" },
+  Finalizado: { label: "Finalizado", className: "bg-muted text-muted-foreground" },
+  Cancelado:  { label: "Cancelado",  className: "bg-destructive/15 text-destructive" },
+};
 
-export default function Lobby() {
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
+function formatFecha(fecha: Date): string {
+  return new Date(fecha).toLocaleDateString("es-AR", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
 
-  function handleConfirm() {
-    setConfirmed(true);
-    setConfirmOpen(false);
+// ─── Subcomponentes ───────────────────────────────────────────────────────────
+
+function TablaLobbyskeleton() {
+  return (
+    <div className="space-y-2">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Skeleton key={i} className="h-14 w-full rounded-lg" />
+      ))}
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function AdminLobbyPage() {
+  const [lobbies, setLobbies] = useState<LobbyConRelaciones[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<LobbyConRelaciones | null>(null);
+  const [cancelando, setCancelando] = useState(false);
+
+  const fetchLobbies = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/lobby?todos=true");
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error ?? "Error al cargar lobbies");
+        return;
+      }
+      setLobbies(json.data as LobbyConRelaciones[]);
+    } catch {
+      setError("Error de red");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLobbies();
+  }, [fetchLobbies]);
+
+  async function handleCancelar() {
+    if (!cancelTarget) return;
+    setCancelando(true);
+
+    try {
+      const res = await fetch(`/api/lobby/${cancelTarget.id_lobby}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estado_lobby: "Cancelado" }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error ?? "Error al cancelar el lobby");
+        return;
+      }
+      await fetchLobbies();
+    } catch {
+      setError("Error de red");
+    } finally {
+      setCancelando(false);
+      setCancelTarget(null);
+    }
   }
 
   return (
-    <AppShell title="Lobby del partido" subtitle="Club Norte · Cancha 3 · Hoy 20:00">
-      <div className="max-w-3xl space-y-6">
-        <div
-          className="rounded-2xl p-6 text-primary-foreground relative overflow-hidden shadow-card"
-          style={{ background: "var(--gradient-court)" }}
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-xs uppercase tracking-wider text-primary-foreground/60">Próximo partido</div>
-              <div className="mt-1 text-3xl font-bold">Hoy · 20:00</div>
-              <div className="mt-2 flex flex-wrap gap-3 text-sm text-primary-foreground/80">
-                <span className="flex items-center gap-1"><MapPin className="size-3.5" /> Club Norte · Cancha 3</span>
-                <span className="flex items-center gap-1"><Clock className="size-3.5" /> 90 min</span>
-                <span className="flex items-center gap-1"><Cloud className="size-3.5" /> 22° despejado</span>
-              </div>
-            </div>
-            <button className="text-xs bg-white/10 backdrop-blur px-3 py-1.5 rounded-full flex items-center gap-1.5 hover:bg-white/15">
-              <Share2 className="size-3.5" /> Compartir
-            </button>
+    <AppShell title="Gestión de Lobbies" subtitle="Vista administrativa — todos los lobbies">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            {!loading && `${lobbies.length} lobbies en total`}
           </div>
-          <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-lime text-lime-foreground text-xs font-bold">
-            Falta 1 jugador
-          </div>
-        </div>
-
-        <div>
-          <h3 className="font-bold mb-3">Jugadores (3/4)</h3>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {players.map((p, i) => (
-              <div key={i} className={`rounded-2xl border p-4 flex items-center gap-3 transition ${p.status === "empty" ? "border-dashed border-border bg-muted/30" : "bg-card border-border shadow-soft"}`}>
-                <div className={`size-12 rounded-full flex items-center justify-center font-bold ${p.status === "empty" ? "bg-card border border-dashed text-muted-foreground" : "bg-primary text-primary-foreground"}`}>
-                  {p.initials}
-                </div>
-                <div className="flex-1 min-w-0">
-                  {p.status === "empty" ? (
-                    <>
-                      <div className="font-semibold text-sm">Lugar disponible</div>
-                      <div className="text-xs text-muted-foreground">Invitá o aceptá solicitudes</div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="font-semibold text-sm flex items-center gap-1.5 truncate">
-                        {p.name}
-                        {p.host && <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-accent text-accent-foreground">Host</span>}
-                      </div>
-                      <div className="text-xs text-muted-foreground">Cat. {p.level} · {p.side}</div>
-                    </>
-                  )}
-                </div>
-                {p.status === "confirmed" && <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-success/15 text-success">Confirmado</span>}
-                {p.status === "pending" && <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-warning/20 text-warning-foreground">Pendiente</span>}
-                {p.status === "empty" && (
-                  <button className="size-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90">
-                    <UserPlus className="size-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="font-bold mb-3">Solicitudes para unirse ({requests.length})</h3>
-          <div className="space-y-2">
-            {requests.map((r) => (
-              <div key={r.id} className="bg-card border border-border rounded-xl p-3 flex items-center gap-3 shadow-soft">
-                <div className="size-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center font-bold text-sm">
-                  {r.initials}
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-sm">{r.name}</div>
-                  <div className="text-xs text-muted-foreground">Cat. {r.level} · {r.side}</div>
-                </div>
-                <button className="size-9 rounded-full bg-success text-success-foreground flex items-center justify-center hover:opacity-90">
-                  <Check className="size-4" />
-                </button>
-                <button className="size-9 rounded-full bg-muted hover:bg-destructive/15 hover:text-destructive flex items-center justify-center">
-                  <X className="size-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          {confirmed ? (
-            <div className="inline-flex items-center gap-2 bg-success/15 text-success px-5 py-2.5 rounded-full text-sm font-semibold">
-              <Check className="size-4" /> Reserva confirmada
-            </div>
-          ) : (
-            <Button onClick={() => setConfirmOpen(true)} className="rounded-full px-5">
-              Confirmar reserva
-            </Button>
-          )}
-          <Button variant="outline" className="rounded-full px-5">
-            Cancelar reserva
+          <Button variant="outline" size="sm" onClick={fetchLobbies} disabled={loading}>
+            Actualizar
           </Button>
         </div>
+
+        {/* Error */}
+        {error && (
+          <div className="text-sm text-destructive bg-destructive/10 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        {/* Tabla */}
+        {loading ? (
+          <TablaLobbyskeleton />
+        ) : lobbies.length === 0 ? (
+          <div className="text-center text-muted-foreground text-sm py-16">
+            No hay lobbies registrados.
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>#</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Hora</TableHead>
+                  <TableHead>Cancha</TableHead>
+                  <TableHead>Organizador</TableHead>
+                  <TableHead>Jugadores</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {lobbies.map((lobby) => {
+                  const badgeConfig = ESTADO_CONFIG[lobby.estado_lobby] ?? ESTADO_CONFIG["Abierto"];
+                  const jugadoresActivos = lobby.jugadores.length;
+                  const total = jugadoresActivos + lobby.jugadores_faltantes;
+                  const cancelable = lobby.estado_lobby === "Abierto" || lobby.estado_lobby === "Confirmado";
+
+                  return (
+                    <TableRow key={lobby.id_lobby}>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        #{lobby.id_lobby}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {formatFecha(lobby.turno.fecha)}
+                      </TableCell>
+                      <TableCell className="text-sm">{lobby.turno.hora}</TableCell>
+                      <TableCell className="text-sm">
+                        Cancha {lobby.turno.cancha.nro_cancha}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {lobby.creador.usuario.nombre} {lobby.creador.usuario.apellido}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {jugadoresActivos}/{total}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${badgeConfig.className}`}
+                        >
+                          {badgeConfig.label}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {cancelable && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => setCancelTarget(lobby)}
+                          >
+                            Cancelar
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
 
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      {/* Dialog confirmación cancelar */}
+      <Dialog open={!!cancelTarget} onOpenChange={(open) => !open && setCancelTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar reserva</DialogTitle>
+            <DialogTitle>Cancelar lobby</DialogTitle>
             <DialogDescription>
-              Estás por confirmar tu lugar en el partido de hoy a las 20:00 en Club Norte · Cancha 3.
+              {cancelTarget && (
+                <>
+                  Vas a cancelar el lobby #{cancelTarget.id_lobby} del{" "}
+                  {formatFecha(cancelTarget.turno.fecha)} a las {cancelTarget.turno.hora} en la
+                  Cancha {cancelTarget.turno.cancha.nro_cancha}. Esta acción no se puede deshacer.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-2 text-sm text-muted-foreground space-y-1">
-            <div><span className="font-semibold text-foreground">Fecha:</span> Hoy · 20:00</div>
-            <div><span className="font-semibold text-foreground">Cancha:</span> Club Norte · Cancha 3</div>
-            <div><span className="font-semibold text-foreground">Duración:</span> 90 min</div>
-          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancelar</Button>
-            <Button onClick={handleConfirm}>Confirmar</Button>
+            <Button
+              variant="outline"
+              onClick={() => setCancelTarget(null)}
+              disabled={cancelando}
+            >
+              Volver
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelar}
+              disabled={cancelando}
+            >
+              {cancelando ? "Cancelando..." : "Confirmar cancelación"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
