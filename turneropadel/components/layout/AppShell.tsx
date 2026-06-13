@@ -27,6 +27,7 @@ const navMain = [
 
 const navAdmin = [
   { to: "/admin", label: "Complejo", icon: Building2 },
+  { to: "/admin/lobby", label: "Lobbies", icon: Users2 }, 
   { to: "/admin/reportes", label: "Reportes", icon: BarChart3 },
 ];
 

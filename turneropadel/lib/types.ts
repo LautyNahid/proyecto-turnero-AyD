@@ -23,7 +23,7 @@ export type EstadoSolicitud = "Pendiente" | "Aceptada" | "Rechazada" | "Cancelad
 export type EstadoJugadorSlot = "confirmed" | "pending" | "empty";
  
 export interface JugadorSlot {
-  id: number;
+  id: number | string; 
   name: string | null;
   initials: string;
   level: string | null;
