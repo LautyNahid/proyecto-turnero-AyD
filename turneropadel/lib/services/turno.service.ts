@@ -11,6 +11,10 @@ import type {
   UpdateTurnoData,
 } from "@/lib/repositories/turno.repository";
 import { ServiceError } from "@/lib/services/service-error";
+//Se utiliza esta libreria para facilitar la extensibilidad por si en un futuro se quiere hacer para varios paises.
+import { fromZonedTime } from "date-fns-tz";
+
+const TIMEZONE = "America/Argentina/Buenos_Aires";
 
 const ESTADOS_TURNO: EstadoTurno[] = ["Disponible", "Reservado", "EnCurso", "Finalizado"];
 
@@ -50,7 +54,9 @@ function parseFecha(value: unknown): Date {
     throw new ServiceError("La fecha debe tener formato YYYY-MM-DD");
   }
 
-  const fecha = new Date(`${value}T00:00:00.000Z`);
+  
+  const fecha = fromZonedTime(`${value}T00:00:00`, TIMEZONE);
+
   if (Number.isNaN(fecha.getTime())) {
     throw new ServiceError("La fecha enviada es invalida");
   }
