@@ -1,142 +1,95 @@
 import Link from "next/link";
+import { CanchasCrudProvider, CanchasCrudSection, CanchasKpi } from "@/components/admin/CanchasCrud";
 import { AppShell } from "@/components/layout/AppShell";
-import { Plus, Edit3, Lock, DollarSign, Calendar } from "lucide-react";
-
-const courtsList = [
-  { id: 1, name: "Cancha 1", type: "Cristal · Indoor", status: "Activa", price: "$2.800" },
-  { id: 2, name: "Cancha 2", type: "Cristal · Outdoor", status: "Activa", price: "$2.400" },
-  { id: 3, name: "Cancha 3", type: "Panorámica", status: "Mantenimiento", price: "$3.200" },
-  { id: 4, name: "Cancha 4", type: "Cristal · Indoor", status: "Activa", price: "$2.800" },
-];
+import { DollarSign, Calendar } from "lucide-react";
 
 const todayBookings = [
   { time: "08:00", court: "C1", player: "Lucas G.", paid: true },
-  { time: "09:30", court: "C2", player: "Sofía M.", paid: true },
-  { time: "11:00", court: "C1", player: "—", blocked: true },
+  { time: "09:30", court: "C2", player: "Sofia M.", paid: true },
+  { time: "11:00", court: "C1", player: "-", blocked: true },
   { time: "14:00", court: "C4", player: "Federico R.", paid: false },
   { time: "17:00", court: "C2", player: "Bianca T.", paid: true },
   { time: "18:30", court: "C1", player: "Diego A.", paid: true },
-  { time: "20:00", court: "C3", player: "Martín R.", paid: false },
+  { time: "20:00", court: "C3", player: "Martin R.", paid: false },
   { time: "21:30", court: "C4", player: "Lautaro V.", paid: true },
 ];
 
 const pricing = [
-  { range: "08:00 – 12:00", weekday: "$2.200", weekend: "$2.600" },
-  { range: "12:00 – 17:00", weekday: "$2.400", weekend: "$2.800" },
-  { range: "17:00 – 23:00", weekday: "$2.800", weekend: "$3.200" },
+  { range: "08:00 - 12:00", weekday: "$2.200", weekend: "$2.600" },
+  { range: "12:00 - 17:00", weekday: "$2.400", weekend: "$2.800" },
+  { range: "17:00 - 23:00", weekday: "$2.800", weekend: "$3.200" },
 ];
 
 export default function Admin() {
   return (
-    <AppShell title="Panel del Complejo" subtitle="Club Norte · Gestión operativa">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Kpi label="Reservas hoy" value="14" delta="+12%" tone="lime" />
-        <Kpi label="Ingresos hoy" value="$38.4k" delta="+8%" />
-        <Kpi label="Ocupación" value="78%" delta="+5%" />
-        <Kpi label="Cancelaciones" value="3" delta="-2" tone="muted" />
-      </div>
-
-      <div className="grid lg:grid-cols-[1fr_380px] gap-6">
-        <div className="space-y-6">
-          <section className="bg-card rounded-2xl border border-border shadow-soft">
-            <div className="p-5 flex items-center justify-between border-b border-border">
-              <div>
-                <h3 className="font-bold">Canchas</h3>
-                <p className="text-xs text-muted-foreground">Alta, baja y modificación</p>
-              </div>
-              <button className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-xs font-semibold hover:opacity-90">
-                <Plus className="size-3.5" /> Nueva cancha
-              </button>
-            </div>
-            <table className="w-full text-sm">
-              <thead className="text-xs text-muted-foreground">
-                <tr>
-                  <th className="text-left p-3 pl-5">Nombre</th>
-                  <th className="text-left p-3">Tipo</th>
-                  <th className="text-left p-3">Estado</th>
-                  <th className="text-left p-3">Precio base</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {courtsList.map((c) => (
-                  <tr key={c.id} className="border-t border-border">
-                    <td className="p-3 pl-5 font-semibold">{c.name}</td>
-                    <td className="p-3 text-muted-foreground">{c.type}</td>
-                    <td className="p-3">
-                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${c.status === "Activa" ? "bg-success/15 text-success" : "bg-warning/20 text-warning-foreground"}`}>
-                        {c.status}
-                      </span>
-                    </td>
-                    <td className="p-3 font-semibold">{c.price}</td>
-                    <td className="p-3 text-right pr-5 space-x-1">
-                      <button className="size-8 rounded-lg hover:bg-muted inline-flex items-center justify-center text-muted-foreground">
-                        <Edit3 className="size-3.5" />
-                      </button>
-                      <button className="size-8 rounded-lg hover:bg-muted inline-flex items-center justify-center text-muted-foreground">
-                        <Lock className="size-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          <section className="bg-card rounded-2xl border border-border shadow-soft p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-bold flex items-center gap-2"><DollarSign className="size-4" /> Precios por horario</h3>
-                <p className="text-xs text-muted-foreground">Configurá tarifas por franja</p>
-              </div>
-              <button className="text-xs text-primary font-semibold hover:underline">Editar todo</button>
-            </div>
-            <div className="grid grid-cols-3 gap-3 text-sm">
-              <div className="text-xs text-muted-foreground font-semibold">Franja</div>
-              <div className="text-xs text-muted-foreground font-semibold">Lun–Vie</div>
-              <div className="text-xs text-muted-foreground font-semibold">Sáb–Dom</div>
-              {pricing.map((p, i) => (
-                <>
-                  <div key={`range-${i}`} className="font-semibold">{p.range}</div>
-                  <div key={`weekday-${i}`} className="rounded-lg bg-muted px-3 py-2">{p.weekday}</div>
-                  <div key={`weekend-${i}`} className="rounded-lg bg-lime/30 px-3 py-2 font-semibold">{p.weekend}</div>
-                </>
-              ))}
-            </div>
-          </section>
-
-          <Link href="/admin/reportes" className="text-sm font-semibold text-primary hover:underline">
-            Ver reportes detallados →
-          </Link>
+    <CanchasCrudProvider>
+      <AppShell title="Panel del Complejo" subtitle="Club Norte - Gestion operativa">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Kpi label="Reservas hoy" value="14" delta="+12%" tone="lime" />
+          <Kpi label="Ingresos hoy" value="$38.4k" delta="+8%" />
+          <CanchasKpi />
+          <Kpi label="Cancelaciones" value="3" delta="-2" tone="muted" />
         </div>
 
-        <aside className="bg-card rounded-2xl border border-border shadow-card overflow-hidden h-fit sticky top-24">
-          <div className="p-5 border-b border-border flex items-center gap-2">
-            <Calendar className="size-4 text-primary" />
-            <div>
-              <div className="font-bold text-sm">Agenda del día</div>
-              <div className="text-xs text-muted-foreground">Martes 13 · 14 reservas</div>
-            </div>
-          </div>
-          <div className="divide-y divide-border max-h-[520px] overflow-y-auto">
-            {todayBookings.map((b, i) => (
-              <div key={i} className="p-3 flex items-center gap-3 hover:bg-muted/40">
-                <div className="text-sm font-bold w-12">{b.time}</div>
-                <div className="text-[10px] font-bold px-2 py-0.5 rounded bg-secondary">{b.court}</div>
-                <div className="flex-1 text-sm truncate">{b.player}</div>
-                {b.blocked ? (
-                  <span className="text-[10px] font-bold uppercase text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">Bloq.</span>
-                ) : b.paid ? (
-                  <span className="text-[10px] font-bold uppercase text-success bg-success/15 px-2 py-0.5 rounded-full">Pago</span>
-                ) : (
-                  <span className="text-[10px] font-bold uppercase text-warning-foreground bg-warning/20 px-2 py-0.5 rounded-full">Pend.</span>
-                )}
+        <div className="grid lg:grid-cols-[1fr_380px] gap-6">
+          <div className="space-y-6">
+            <CanchasCrudSection />
+
+            <section className="bg-card rounded-2xl border border-border shadow-soft p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-bold flex items-center gap-2"><DollarSign className="size-4" /> Precios por horario</h3>
+                  <p className="text-xs text-muted-foreground">Configura tarifas por franja</p>
+                </div>
+                <button className="text-xs text-primary font-semibold hover:underline">Editar todo</button>
               </div>
-            ))}
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="text-xs text-muted-foreground font-semibold">Franja</div>
+                <div className="text-xs text-muted-foreground font-semibold">Lun-Vie</div>
+                <div className="text-xs text-muted-foreground font-semibold">Sab-Dom</div>
+                {pricing.map((p) => (
+                  <div key={p.range} className="contents">
+                    <div className="font-semibold">{p.range}</div>
+                    <div className="rounded-lg bg-muted px-3 py-2">{p.weekday}</div>
+                    <div className="rounded-lg bg-lime/30 px-3 py-2 font-semibold">{p.weekend}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <Link href="/admin/reportes" className="text-sm font-semibold text-primary hover:underline">
+              Ver reportes detallados
+            </Link>
           </div>
-        </aside>
-      </div>
-    </AppShell>
+
+          <aside className="bg-card rounded-2xl border border-border shadow-card overflow-hidden h-fit sticky top-24">
+            <div className="p-5 border-b border-border flex items-center gap-2">
+              <Calendar className="size-4 text-primary" />
+              <div>
+                <div className="font-bold text-sm">Agenda del dia</div>
+                <div className="text-xs text-muted-foreground">Martes 13 - 14 reservas</div>
+              </div>
+            </div>
+            <div className="divide-y divide-border max-h-[520px] overflow-y-auto">
+              {todayBookings.map((b, i) => (
+                <div key={`${b.time}-${i}`} className="p-3 flex items-center gap-3 hover:bg-muted/40">
+                  <div className="text-sm font-bold w-12">{b.time}</div>
+                  <div className="text-[10px] font-bold px-2 py-0.5 rounded bg-secondary">{b.court}</div>
+                  <div className="flex-1 text-sm truncate">{b.player}</div>
+                  {b.blocked ? (
+                    <span className="text-[10px] font-bold uppercase text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">Bloq.</span>
+                  ) : b.paid ? (
+                    <span className="text-[10px] font-bold uppercase text-success bg-success/15 px-2 py-0.5 rounded-full">Pago</span>
+                  ) : (
+                    <span className="text-[10px] font-bold uppercase text-warning-foreground bg-warning/20 px-2 py-0.5 rounded-full">Pend.</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </aside>
+        </div>
+      </AppShell>
+    </CanchasCrudProvider>
   );
 }
 
