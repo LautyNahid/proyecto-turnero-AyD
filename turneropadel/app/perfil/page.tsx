@@ -2,32 +2,33 @@
 
 import { useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
-import { Trophy, Hand, Target, Edit3 } from "lucide-react";
+import { Trophy, Hand, Target, Edit3, CalendarRange } from "lucide-react";
+import { EvaluacionSheet } from "@/components/evaluaciones/EvaluacionSheet";
+
+// ─── Tipos ───────────────────────────────────────────────────────────────────
 
 const tabs = ["Próximos", "Completados", "Cancelados"] as const;
 type Tab = typeof tabs[number];
 
-const matches: Record<Tab, { id: number; club: string; date: string; court: string; status: string }[]> = {
-  Próximos: [
-    { id: 1, club: "Club Norte", date: "Hoy · 20:00", court: "Cancha 3", status: "Confirmado" },
-    { id: 2, club: "Padel House", date: "Sáb · 10:30", court: "Cancha 1", status: "Pendiente" },
-  ],
-  Completados: [
-    { id: 3, club: "La Pulpera", date: "Lun · 19:00", court: "Cancha 2", status: "Ganado 6-3 / 7-5" },
-    { id: 4, club: "Smash Center", date: "Sáb pasado · 18:00", court: "Cancha 4", status: "Perdido 4-6 / 6-7" },
-    { id: 5, club: "Club Norte", date: "Vie · 21:00", court: "Cancha 1", status: "Ganado 6-2 / 6-4" },
-  ],
-  Cancelados: [
-    { id: 6, club: "Padel House", date: "Mar pasado · 19:30", court: "Cancha 3", status: "Cancelado por lluvia" },
-  ],
-};
+interface Partido {
+  id: number;
+  club: string;
+  date: string;
+  court: string;
+  status: string;
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Perfil() {
   const [tab, setTab] = useState<Tab>("Próximos");
+  const [partidoSeleccionado, setPartidoSeleccionado] = useState<Partido | null>(null);
 
   return (
     <AppShell title="Mi perfil" subtitle="Tus datos y tu historial deportivo">
       <div className="grid lg:grid-cols-[340px_1fr] gap-6">
+
+        {/* ── Columna izquierda ── */}
         <div className="space-y-4">
           <div className="bg-card rounded-2xl border border-border shadow-card p-6 text-center relative overflow-hidden">
             <div className="absolute inset-x-0 top-0 h-24" style={{ background: "var(--gradient-court)" }} />
@@ -51,14 +52,15 @@ export default function Perfil() {
           <div className="bg-card rounded-2xl border border-border shadow-soft p-5">
             <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Estadísticas</div>
             <div className="mt-3 space-y-2 text-sm">
-              <Row label="Partidos jugados" value="42" />
-              <Row label="Victorias" value="28 (66%)" />
-              <Row label="Compañeros" value="18" />
-              <Row label="Clubes visitados" value="6" />
+              <Row label="Partidos jugados" value="0" />
+              <Row label="Victorias" value="0" />
+              <Row label="Compañeros" value="0" />
+              <Row label="Clubes visitados" value="0" />
             </div>
           </div>
         </div>
 
+        {/* ── Columna derecha ── */}
         <div>
           <div className="flex gap-1 bg-muted rounded-full p-1 w-fit mb-4">
             {tabs.map((t) => (
@@ -72,30 +74,19 @@ export default function Perfil() {
             ))}
           </div>
 
-          <div className="space-y-3">
-            {matches[tab].map((m) => (
-              <div key={m.id} className="bg-card border border-border rounded-2xl p-4 shadow-soft flex items-center gap-4">
-                <div className="size-12 rounded-xl bg-secondary flex items-center justify-center font-bold text-sm text-secondary-foreground">
-                  {m.club.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold truncate">{m.club}</div>
-                  <div className="text-xs text-muted-foreground">{m.date} · {m.court}</div>
-                </div>
-                <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${
-                  tab === "Próximos"
-                    ? m.status === "Confirmado" ? "bg-success/15 text-success" : "bg-warning/20 text-warning-foreground"
-                    : tab === "Completados"
-                    ? m.status.startsWith("Ganado") ? "bg-success/15 text-success" : "bg-destructive/10 text-destructive"
-                    : "bg-muted text-muted-foreground"
-                }`}>
-                  {m.status}
-                </span>
-              </div>
-            ))}
+          <div className="flex flex-col items-center justify-center h-40 gap-2 text-muted-foreground">
+            <CalendarRange className="size-8" />
+            <span className="text-sm">No hay partidos para mostrar</span>
           </div>
         </div>
       </div>
+
+      {/* ── Sheet de evaluación ── */}
+      <EvaluacionSheet
+        partido={partidoSeleccionado}
+        open={!!partidoSeleccionado}
+        onClose={() => setPartidoSeleccionado(null)}
+      />
     </AppShell>
   );
 }
