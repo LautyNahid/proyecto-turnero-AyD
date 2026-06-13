@@ -1,22 +1,48 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
-import { CalendarRange, MapPin, Users2, Cloud, Clock, ChevronRight, Plus, Trophy, Flame } from "lucide-react";
+import { StatCard } from "@/components/ui/StatCard";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { LobbyCard, LobbyCardSkeleton } from "@/components/partidos/LobbyCard";
+import { LobbySheet } from "@/components/partidos/LobbySheet";
+import { CalendarRange, MapPin, Users2, Clock, ChevronRight, Trophy, Flame } from "lucide-react";
+import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
 
-const openMatches = [
-  { id: 1, club: "Club Norte", court: "Cancha 3", date: "Hoy · 20:00", level: "5ta–6ta", filled: 3, price: 2400, weather: "22°" },
-  { id: 2, club: "Padel House", court: "Cancha 1", date: "Mañana · 19:30", level: "4ta–5ta", filled: 2, price: 2800, weather: "18°" },
-  { id: 3, club: "La Pulpera", court: "Cancha 2", date: "Jue · 21:00", level: "6ta–7ma", filled: 3, price: 2200, weather: "20°" },
-  { id: 4, club: "Smash Center", court: "Cancha 4", date: "Vie · 18:00", level: "5ta", filled: 1, price: 2600, weather: "24°" },
-];
+// ─── Mock data Par 1 (no tocar) ───────────────────────────────────────────────
 
 const upcoming = [
   { id: 1, club: "Club Norte", date: "Hoy", time: "20:00", court: "Cancha 3", players: ["MR", "JL", "PA", "DE"] },
   { id: 2, club: "Padel House", date: "Sáb", time: "10:30", court: "Cancha 1", players: ["MR", "JL", "?", "?"] },
 ];
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function Home() {
+  const [lobbies, setLobbies] = useState<LobbyConRelaciones[]>([]);
+  const [loadingLobbies, setLoadingLobbies] = useState(true);
+  const [selectedLobby, setSelectedLobby] = useState<LobbyConRelaciones | null>(null);
+
+  useEffect(() => {
+    async function fetchLobbies() {
+      try {
+        const res = await fetch("/api/lobby?todos=true");
+        const json = await res.json();
+        if (res.ok) setLobbies(json.data as LobbyConRelaciones[]);
+      } catch {
+        // silencioso — la sección simplemente no muestra lobbies
+      } finally {
+        setLoadingLobbies(false);
+      }
+    }
+    fetchLobbies();
+  }, []);
+
   return (
     <AppShell title="Hola, Martín" subtitle="¿Listo para jugar tu próximo partido?">
+
+      {/* ── Hero + Stats — no tocar ─────────────────────────────────────── */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <div
           className="lg:col-span-2 rounded-2xl p-6 lg:p-8 text-primary-foreground relative overflow-hidden shadow-card"
@@ -50,6 +76,7 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Próximos turnos — no tocar (Par 1) ─────────────────────────── */}
       <section className="mb-8">
         <SectionHeader title="Próximos turnos" action={{ label: "Ver todos", href: "/perfil" }} />
         <div className="grid md:grid-cols-2 gap-4">
@@ -80,70 +107,41 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Partidos abiertos — Par 2 ───────────────────────────────────── */}
       <section>
         <SectionHeader
           title="Partidos abiertos"
           subtitle="Sumate a un partido que necesita jugadores"
           action={{ label: "Crear nuevo", href: "/lobby", icon: true }}
         />
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {openMatches.map((m) => (
-            <Link href="/lobby" key={m.id} className="bg-card rounded-2xl p-5 shadow-soft border border-border hover:shadow-card hover:-translate-y-0.5 transition group">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-lime text-lime-foreground">
-                  {4 - m.filled} {4 - m.filled === 1 ? "lugar" : "lugares"}
-                </span>
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Cloud className="size-3" />{m.weather}
-                </span>
-              </div>
-              <div className="mt-3 font-bold leading-tight">{m.club}</div>
-              <div className="text-xs text-muted-foreground">{m.court} · {m.level}</div>
-              <div className="mt-3 text-sm font-semibold flex items-center gap-1.5">
-                <Clock className="size-3.5" />{m.date}
-              </div>
-              <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-                <div className="flex -space-x-1.5">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className={`size-6 rounded-full ring-2 ring-card text-[9px] font-bold flex items-center justify-center ${i < m.filled ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground border border-dashed border-border"}`}>
-                      {i < m.filled ? "•" : "+"}
-                    </div>
-                  ))}
-                </div>
-                <div className="text-sm font-bold">${m.price}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        {loadingLobbies ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <LobbyCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : lobbies.length === 0 ? (
+          <div className="text-center text-muted-foreground text-sm py-12">
+            No hay partidos abiertos por el momento.
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {lobbies.map((lobby) => (
+              <LobbyCard
+                key={lobby.id_lobby}
+                lobby={lobby}
+                onClick={() => setSelectedLobby(lobby)}
+              />
+            ))}
+          </div>
+        )}
       </section>
+
+      <LobbySheet
+        lobby={selectedLobby}
+        open={!!selectedLobby}
+        onClose={() => setSelectedLobby(null)}
+      />
     </AppShell>
-  );
-}
-
-function StatCard({ icon: Icon, label, value, tone }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; tone?: "primary" | "lime" }) {
-  const bg = tone === "primary" ? "bg-primary text-primary-foreground" : tone === "lime" ? "bg-lime text-lime-foreground" : "bg-card border border-border";
-  return (
-    <div className={`rounded-2xl p-4 shadow-soft ${bg}`}>
-      <Icon className="size-4 opacity-70" />
-      <div className="mt-3 text-2xl font-bold leading-none">{value}</div>
-      <div className="text-[11px] mt-1 opacity-70">{label}</div>
-    </div>
-  );
-}
-
-function SectionHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: { label: string; href: string; icon?: boolean } }) {
-  return (
-    <div className="flex items-end justify-between mb-4">
-      <div>
-        <h3 className="text-lg font-bold tracking-tight">{title}</h3>
-        {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
-      </div>
-      {action && (
-        <Link href={action.href} className="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
-          {action.icon && <Plus className="size-4" />}
-          {action.label}
-        </Link>
-      )}
-    </div>
   );
 }
