@@ -225,7 +225,6 @@ export default function Reservar() {
                 <span className="flex items-center gap-1"><Cloud className="size-3" /> 22 grados - Despejado</span>
               </div>
             </div>
-            <button className="text-sm text-primary font-semibold hover:underline">Cambiar</button>
           </div>
 
           {error && (
@@ -241,9 +240,7 @@ export default function Reservar() {
           )}
 
           <div className="flex items-center gap-2 mb-4">
-            <button className="size-9 rounded-full bg-card border border-border hover:bg-secondary flex items-center justify-center">
-              <ChevronLeft className="size-4" />
-            </button>
+            
             <div className="flex-1 grid grid-cols-7 gap-2">
               {days.map((date, index) => (
                 <button
@@ -257,9 +254,7 @@ export default function Reservar() {
                 </button>
               ))}
             </div>
-            <button className="size-9 rounded-full bg-card border border-border hover:bg-secondary flex items-center justify-center">
-              <ChevronRight className="size-4" />
-            </button>
+            
           </div>
 
           <div className="bg-card rounded-2xl border border-border shadow-soft overflow-hidden">
@@ -293,7 +288,7 @@ export default function Reservar() {
                       <tr key={cancha.id_cancha} className="border-t border-border">
                         <td className="p-3 sticky left-0 bg-card">
                           <div className="font-semibold text-sm">Cancha {cancha.nro_cancha}</div>
-                          <div className="text-[11px] text-muted-foreground">Activa</div>
+                          
                         </td>
                         {hours.map((h) => {
                           const turno = turnosByCanchaAndHour.get(`${cancha.id_cancha}-${h}`);
@@ -331,8 +326,7 @@ export default function Reservar() {
             </div>
             <div className="border-t border-border p-3 flex items-center gap-4 text-xs text-muted-foreground">
               <Legend color="bg-success/40" label="Libre" />
-              <Legend color="bg-muted" label="Ocupado" />
-              <Legend color="bg-destructive/30" label="Sin turno" />
+              <Legend color="bg-muted" label="Reservado" />
               <Legend color="bg-lime" label="Seleccionado" />
             </div>
           </div>
