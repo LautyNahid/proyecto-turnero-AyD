@@ -18,8 +18,15 @@ export type TurnoScheduleKey = {
   hora: string;
 };
 
+export type TurnoFilters = {
+  fechaDesde?: Date;
+  fechaHasta?: Date;
+  estados?: EstadoTurno[];
+};
+
 export interface TurnoRepository {
   findAll(): Promise<Turno[]>;
+  findMany(filters: TurnoFilters): Promise<Turno[]>;
   findById(id_turno: number): Promise<Turno | null>;
   findBySchedule(key: TurnoScheduleKey): Promise<Turno | null>;
   create(data: CreateTurnoData): Promise<Turno>;
@@ -30,6 +37,23 @@ export interface TurnoRepository {
 export class PrismaTurnoRepository implements TurnoRepository {
   findAll() {
     return db.turno.findMany({
+      orderBy: [{ fecha: "asc" }, { hora: "asc" }],
+    });
+  }
+
+  findMany(filters: TurnoFilters) {
+    return db.turno.findMany({
+      where: {
+        ...(filters.fechaDesde || filters.fechaHasta
+          ? {
+              fecha: {
+                ...(filters.fechaDesde ? { gte: filters.fechaDesde } : {}),
+                ...(filters.fechaHasta ? { lte: filters.fechaHasta } : {}),
+              },
+            }
+          : {}),
+        ...(filters.estados ? { estado_turno: { in: filters.estados } } : {}),
+      },
       orderBy: [{ fecha: "asc" }, { hora: "asc" }],
     });
   }

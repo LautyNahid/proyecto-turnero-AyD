@@ -22,6 +22,14 @@ export type CreateReservaData = {
   id_turno: number;
 };
 
+export type CreateReservaWithTurnoData = {
+  id_jugador: string;
+  id_cancha: number;
+  fecha: Date;
+  hora: string;
+  precio: number;
+};
+
 const reservaInclude = {
   jugador: {
     include: {
@@ -40,6 +48,7 @@ export interface ReservaRepository {
   findById(id_reserva: number): Promise<ReservaWithRelations | null>;
   findByTurnoId(id_turno: number): Promise<Reserva | null>;
   create(data: CreateReservaData): Promise<ReservaWithRelations>;
+  createWithTurno(data: CreateReservaWithTurnoData): Promise<ReservaWithRelations>;
   delete(id_reserva: number): Promise<ReservaWithRelations>;
 }
 
@@ -77,6 +86,28 @@ export class PrismaReservaRepository implements ReservaRepository {
       });
 
       return reserva;
+    });
+  }
+
+  createWithTurno(data: CreateReservaWithTurnoData) {
+    return db.$transaction(async (tx) => {
+      const turno = await tx.turno.create({
+        data: {
+          id_cancha: data.id_cancha,
+          fecha: data.fecha,
+          hora: data.hora,
+          precio: data.precio,
+          estado_turno: "Reservado",
+        },
+      });
+
+      return tx.reserva.create({
+        data: {
+          id_jugador: data.id_jugador,
+          id_turno: turno.id_turno,
+        },
+        include: reservaInclude,
+      });
     });
   }
 

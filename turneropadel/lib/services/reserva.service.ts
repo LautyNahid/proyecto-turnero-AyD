@@ -1,3 +1,5 @@
+import { canchaRepository } from "@/lib/repositories/cancha.repository";
+import type { CanchaRepository } from "@/lib/repositories/cancha.repository";
 import { jugadorRepository } from "@/lib/repositories/jugador.repository";
 import type { JugadorRepository } from "@/lib/repositories/jugador.repository";
 import {
@@ -6,11 +8,16 @@ import {
 } from "@/lib/repositories/reserva.repository";
 import type {
   CreateReservaData,
+  CreateReservaWithTurnoData,
   ReservaRepository,
 } from "@/lib/repositories/reserva.repository";
 import { turnoRepository } from "@/lib/repositories/turno.repository";
 import type { TurnoRepository } from "@/lib/repositories/turno.repository";
 import { ServiceError } from "@/lib/services/service-error";
+import { fromZonedTime } from "date-fns-tz";
+
+const TIMEZONE = "America/Argentina/Buenos_Aires";
+const TURNOS_OCUPADOS = ["Reservado", "EnCurso", "Finalizado"];
 
 function ensureObject(body: unknown): Record<string, unknown> {
   if (!body || typeof body !== "object") {
@@ -46,11 +53,53 @@ function parseJugadorId(value: unknown): string {
   return value.trim();
 }
 
+function parseFecha(value: unknown): Date {
+  if (typeof value !== "string") {
+    throw new ServiceError("La fecha debe enviarse como string en formato YYYY-MM-DD");
+  }
+
+  const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateOnlyPattern.test(value)) {
+    throw new ServiceError("La fecha debe tener formato YYYY-MM-DD");
+  }
+
+  const fecha = fromZonedTime(`${value}T00:00:00`, TIMEZONE);
+
+  if (Number.isNaN(fecha.getTime())) {
+    throw new ServiceError("La fecha enviada es invalida");
+  }
+
+  return fecha;
+}
+
+function parseHora(value: unknown): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new ServiceError("La hora es obligatoria");
+  }
+
+  const hora = value.trim();
+  const horaPattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+  if (!horaPattern.test(hora)) {
+    throw new ServiceError("La hora debe tener formato HH:mm");
+  }
+
+  return hora;
+}
+
+function parsePrecio(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    throw new ServiceError("El precio debe ser un numero mayor o igual a cero");
+  }
+
+  return value;
+}
+
 export class ReservaService {
   constructor(
     private readonly repository: ReservaRepository,
     private readonly turnoRepo: TurnoRepository,
     private readonly jugadorRepo: JugadorRepository,
+    private readonly canchaRepo: CanchaRepository,
   ) {}
 
   obtenerReservas() {
@@ -68,18 +117,54 @@ export class ReservaService {
     return reserva;
   }
 
-  async crearReserva(body: unknown) {
+  async crearReserva(body: unknown, idJugadorAutenticado?: string) {
     const payload = ensureObject(body);
-    const data: CreateReservaData = {
-      id_jugador: parseJugadorId(payload.id_jugador),
-      id_turno: parsePositiveInteger(payload.id_turno, "id_turno"),
-    };
+    const id_jugador = idJugadorAutenticado ?? parseJugadorId(payload.id_jugador);
 
-    await this.ensureJugadorExists(data.id_jugador);
-    await this.ensureTurnoDisponible(data.id_turno);
+    await this.ensureJugadorExists(id_jugador);
 
     try {
-      return await this.repository.create(data);
+      if ("id_turno" in payload) {
+        const data: CreateReservaData = {
+          id_jugador,
+          id_turno: parsePositiveInteger(payload.id_turno, "id_turno"),
+        };
+
+        await this.ensureTurnoReservable(data.id_turno);
+
+        return await this.repository.create(data);
+      }
+
+      const data: CreateReservaWithTurnoData = {
+        id_jugador,
+        id_cancha: parsePositiveInteger(payload.id_cancha, "id_cancha"),
+        fecha: parseFecha(payload.fecha),
+        hora: parseHora(payload.hora),
+        precio: parsePrecio(payload.precio),
+      };
+
+      await this.ensureCanchaExists(data.id_cancha);
+
+      const turnoExistente = await this.turnoRepo.findBySchedule({
+        id_cancha: data.id_cancha,
+        fecha: data.fecha,
+        hora: data.hora,
+      });
+
+      if (turnoExistente) {
+        if (TURNOS_OCUPADOS.includes(turnoExistente.estado_turno)) {
+          throw new ServiceError("El turno no esta disponible para reservar", 409);
+        }
+
+        await this.ensureTurnoSinReserva(turnoExistente.id_turno);
+
+        return await this.repository.create({
+          id_jugador,
+          id_turno: turnoExistente.id_turno,
+        });
+      }
+
+      return await this.repository.createWithTurno(data);
     } catch (error) {
       if (isKnownPrismaError(error, "P2002")) {
         throw new ServiceError("El turno ya tiene una reserva asociada", 409);
@@ -120,17 +205,29 @@ export class ReservaService {
     }
   }
 
-  private async ensureTurnoDisponible(id_turno: number) {
+  private async ensureCanchaExists(id_cancha: number) {
+    const cancha = await this.canchaRepo.findById(id_cancha);
+
+    if (!cancha) {
+      throw new ServiceError("La cancha indicada no existe", 404);
+    }
+  }
+
+  private async ensureTurnoReservable(id_turno: number) {
     const turno = await this.turnoRepo.findById(id_turno);
 
     if (!turno) {
       throw new ServiceError("El turno indicado no existe", 404);
     }
 
-    if (turno.estado_turno !== "Disponible") {
+    if (TURNOS_OCUPADOS.includes(turno.estado_turno)) {
       throw new ServiceError("El turno no esta disponible para reservar", 409);
     }
 
+    await this.ensureTurnoSinReserva(id_turno);
+  }
+
+  private async ensureTurnoSinReserva(id_turno: number) {
     const reservaExistente = await this.repository.findByTurnoId(id_turno);
 
     if (reservaExistente) {
@@ -139,4 +236,4 @@ export class ReservaService {
   }
 }
 
-export const reservaService = new ReservaService(reservaRepository, turnoRepository, jugadorRepository);
+export const reservaService = new ReservaService(reservaRepository, turnoRepository, jugadorRepository, canchaRepository);

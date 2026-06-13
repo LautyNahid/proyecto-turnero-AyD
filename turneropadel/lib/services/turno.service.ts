@@ -17,6 +17,7 @@ import { fromZonedTime } from "date-fns-tz";
 const TIMEZONE = "America/Argentina/Buenos_Aires";
 
 const ESTADOS_TURNO: EstadoTurno[] = ["Disponible", "Reservado", "EnCurso", "Finalizado"];
+const ESTADOS_OCUPADOS: EstadoTurno[] = ["Reservado", "EnCurso", "Finalizado"];
 
 function ensureObject(body: unknown): Record<string, unknown> {
   if (!body || typeof body !== "object") {
@@ -64,6 +65,12 @@ function parseFecha(value: unknown): Date {
   return fecha;
 }
 
+function parseOptionalFecha(value: string | null): Date | undefined {
+  if (!value) return undefined;
+
+  return parseFecha(value);
+}
+
 function parseHora(value: unknown): string {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw new ServiceError("La hora es obligatoria");
@@ -106,6 +113,22 @@ export class TurnoService {
     return this.repository.findAll();
   }
 
+  obtenerTurnosFiltrados(searchParams: URLSearchParams) {
+    const fechaDesde = parseOptionalFecha(searchParams.get("fechaDesde"));
+    const fechaHasta = parseOptionalFecha(searchParams.get("fechaHasta"));
+    const ocupados = searchParams.get("ocupados") === "true";
+
+    if (!fechaDesde && !fechaHasta && !ocupados) {
+      return this.obtenerTurnos();
+    }
+
+    return this.repository.findMany({
+      fechaDesde,
+      fechaHasta,
+      estados: ocupados ? ESTADOS_OCUPADOS : undefined,
+    });
+  }
+
   async obtenerTurnoPorId(idParam: string) {
     const id_turno = parseTurnoId(idParam);
     const turno = await this.repository.findById(id_turno);
@@ -124,13 +147,8 @@ export class TurnoService {
       fecha: parseFecha(payload.fecha),
       hora: parseHora(payload.hora),
       precio: parsePrecio(payload.precio),
+      estado_turno: "Reservado",
     };
-    const estadoTurno = parseEstadoTurno(payload.estado_turno);
-
-    if (estadoTurno !== undefined) {
-      data.estado_turno = estadoTurno;
-    }
-
     await this.ensureCanchaExists(data.id_cancha);
     await this.ensureHorarioDisponible(data);
 

@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { routeErrorResponse } from "@/lib/http/rest-response";
 import { turnoService } from "@/lib/services/turno.service";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const turnos = await turnoService.obtenerTurnos();
+    const { searchParams } = new URL(req.url);
+    const turnos = await turnoService.obtenerTurnosFiltrados(searchParams);
     return NextResponse.json(turnos);
   } catch (error) {
     return routeErrorResponse(error, "Error al obtener turnos", "[api/turno][GET]");
