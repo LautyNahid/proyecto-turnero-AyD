@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Clock, Cloud, Share2, Check } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
+import { MapPin, Clock, Cloud, Share2, Check, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,31 +14,85 @@ import {
 } from "@/components/ui/dialog";
 import { PlayerSlot } from "./PlayerSlot";
 import { SolicitudItem } from "./SolicitudItem";
-import type { PartidoLobby, Solicitud } from "@/lib/types";
+import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
+import type { JugadorSlot } from "@/lib/types";
+
+// Types 
 
 interface LobbyDetailProps {
-  lobby: PartidoLobby;
+  lobby: LobbyConRelaciones;
+  onAceptarSolicitud: (id_solicitud: number) => Promise<void>;
+  onRechazarSolicitud: (id_solicitud: number) => Promise<void>;
+  onExpulsarJugador: (id_jugador: string) => Promise<void>;
 }
 
-export function LobbyDetail({ lobby }: LobbyDetailProps) {
+
+//  Mappers 
+
+type JugadorSlotLocal = Omit<JugadorSlot, "id"> & { id: string };
+
+function toJugadorSlot(
+  jugador: LobbyConRelaciones["jugadores"][number],
+  esCreador: boolean
+): JugadorSlotLocal {
+  return {
+    id: jugador.id_jugador,  // string
+    name: `${jugador.jugador.usuario.nombre} ${jugador.jugador.usuario.apellido}`,
+    initials: `${jugador.jugador.usuario.nombre[0]}${jugador.jugador.usuario.apellido[0]}`,
+    level: `Cat. ${jugador.jugador.categoria}`,
+    side: null,
+    status: "confirmed" as const,
+    host: esCreador,
+  };
+}
+
+function toSolicitudUI(solicitud: LobbyConRelaciones["solicitudes"][number]) {
+  return {
+    id: solicitud.id_solicitud,
+    id_jugador: solicitud.id_jugador,
+    estado: solicitud.estado_solicitud,
+  };
+}
+
+// Component 
+
+export function LobbyDetail({
+  lobby,
+  onAceptarSolicitud,
+  onRechazarSolicitud,
+  onExpulsarJugador,
+}: LobbyDetailProps) {
+  const { user } = useUser();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
-  const [solicitudes, setSolicitudes] = useState<Solicitud[]>(lobby.solicitudes);
+  const [loadingId, setLoadingId] = useState<number | null>(null);
 
-  const jugadoresActivos = lobby.jugadores.filter((j) => j.status !== "empty").length;
-  const hayFaltante = lobby.jugadores.some((j) => j.status === "empty");
+  const esOrganizador = user?.id === lobby.id_creador;
+  const solicitudesPendientes = lobby.solicitudes.filter(
+    (s) => s.estado_solicitud === "Pendiente"
+  );
+  const jugadoresConfirmados = lobby.jugadores.length;
+  const lugaresVacios = lobby.jugadores_faltantes;
+  const fecha = new Date(lobby.turno.fecha).toLocaleDateString("es-AR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 
-  function handleAceptar(id: number) {
-    setSolicitudes((prev) => prev.filter((s) => s.id !== id));
+  async function handleAceptar(id_solicitud: number) {
+    setLoadingId(id_solicitud);
+    await onAceptarSolicitud(id_solicitud);
+    setLoadingId(null);
   }
 
-  function handleRechazar(id: number) {
-    setSolicitudes((prev) => prev.filter((s) => s.id !== id));
+  async function handleRechazar(id_solicitud: number) {
+    setLoadingId(id_solicitud);
+    await onRechazarSolicitud(id_solicitud);
+    setLoadingId(null);
   }
 
   return (
     <div className="space-y-6">
-      {/* Hero card */}
+      {/* Hero */}
       <div
         className="rounded-2xl p-6 text-primary-foreground relative overflow-hidden shadow-[var(--shadow-card)]"
         style={{ background: "var(--gradient-court)" }}
@@ -47,112 +102,110 @@ export function LobbyDetail({ lobby }: LobbyDetailProps) {
             <div className="text-xs uppercase tracking-wider text-primary-foreground/60">
               Próximo partido
             </div>
-            <div className="mt-1 text-3xl font-bold">
-              {lobby.fecha} · {lobby.hora}
-            </div>
+            <div className="mt-1 text-3xl font-bold capitalize">{fecha} · {lobby.turno.hora}</div>
             <div className="mt-2 flex flex-wrap gap-3 text-sm text-primary-foreground/80">
               <span className="flex items-center gap-1">
                 <MapPin className="size-3.5 shrink-0" />
-                {lobby.club} · {lobby.cancha}
+                Cancha {lobby.turno.cancha.nro_cancha}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="size-3.5 shrink-0" />
-                {lobby.duracionMin} min
+                90 min
               </span>
-              {lobby.clima && (
-                <span className="flex items-center gap-1">
-                  <Cloud className="size-3.5 shrink-0" />
-                  {lobby.clima}
-                </span>
-              )}
             </div>
           </div>
           <button className="text-xs bg-white/10 backdrop-blur px-3 py-1.5 rounded-full flex items-center gap-1.5 hover:bg-white/15 shrink-0">
             <Share2 className="size-3.5" /> Compartir
           </button>
         </div>
-        {hayFaltante && (
+        {lugaresVacios > 0 && (
           <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-lime text-lime-foreground text-xs font-bold">
-            Falta {lobby.jugadores.filter((j) => j.status === "empty").length} jugador
+            {lugaresVacios === 1 ? "Falta 1 jugador" : `Faltan ${lugaresVacios} jugadores`}
+          </div>
+        )}
+        {lobby.estado_lobby === "Confirmado" && (
+          <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/20 text-success text-xs font-bold">
+            <Check className="size-3.5" /> Partido confirmado
           </div>
         )}
       </div>
 
       {/* Jugadores */}
       <div>
-        <h3 className="font-bold mb-3">Jugadores ({jugadoresActivos}/4)</h3>
+        <h3 className="font-bold mb-3">
+          Jugadores ({jugadoresConfirmados}/{jugadoresConfirmados + lugaresVacios})
+        </h3>
         <div className="grid sm:grid-cols-2 gap-3">
-          {lobby.jugadores.map((jugador) => (
-            <PlayerSlot key={jugador.id} jugador={jugador} />
+          {lobby.jugadores.map((lj) => (
+            <div key={lj.id_jugador} className="relative">
+              <PlayerSlot jugador={toJugadorSlot(lj, lj.id_jugador === lobby.id_creador)} />
+              {esOrganizador && lj.id_jugador !== lobby.id_creador && (
+                <button
+                  onClick={() => onExpulsarJugador(lj.id_jugador)}
+                  className="absolute top-2 right-2 size-7 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive flex items-center justify-center transition"
+                  title="Expulsar jugador"
+                >
+                  <UserMinus className="size-3.5" />
+                </button>
+              )}
+            </div>
+          ))}
+          {Array.from({ length: lugaresVacios }).map((_, i) => (
+            <PlayerSlot
+              key={`empty-${i}`}
+              jugador={{ id: -(i + 1), name: null, initials: "+", level: null, side: null, status: "empty" }}
+            />
           ))}
         </div>
       </div>
 
-      {/* Solicitudes */}
-      {solicitudes.length > 0 && (
+      {/* Solicitudes — solo organizador */}
+      {esOrganizador && solicitudesPendientes.length > 0 && (
         <div>
-          <h3 className="font-bold mb-3">Solicitudes para unirse ({solicitudes.length})</h3>
+          <h3 className="font-bold mb-3">
+            Solicitudes para unirse ({solicitudesPendientes.length})
+          </h3>
           <div className="space-y-2">
-            {solicitudes.map((s) => (
-              <SolicitudItem
-                key={s.id}
-                solicitud={s}
-                onAceptar={handleAceptar}
-                onRechazar={handleRechazar}
-              />
-            ))}
+            {solicitudesPendientes.map((s) => {
+              const ui = toSolicitudUI(s);
+              return (
+                <SolicitudItem
+                  key={ui.id}
+                  solicitud={ui}
+                  loading={loadingId === ui.id}
+                  onAceptar={handleAceptar}
+                  onRechazar={handleRechazar}
+                />
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* Acciones */}
-      <div className="flex flex-wrap gap-3">
-        {confirmed ? (
-          <div className="inline-flex items-center gap-2 bg-success/15 text-success px-5 py-2.5 rounded-full text-sm font-semibold">
-            <Check className="size-4" /> Reserva confirmada
-          </div>
-        ) : (
-          <Button onClick={() => setConfirmOpen(true)} className="rounded-full px-5">
-            Confirmar reserva
+      {esOrganizador && (
+        <div className="flex flex-wrap gap-3">
+          <Button variant="outline" className="rounded-full px-5" onClick={() => setConfirmOpen(true)}>
+            Cancelar lobby
           </Button>
-        )}
-        <Button variant="outline" className="rounded-full px-5">
-          Cancelar reserva
-        </Button>
-      </div>
+        </div>
+      )}
 
-      {/* Dialog confirmación */}
+      {/* Dialog cancelar */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar reserva</DialogTitle>
+            <DialogTitle>Cancelar lobby</DialogTitle>
             <DialogDescription>
-              Estás por confirmar tu lugar en el partido del {lobby.fecha} a las {lobby.hora} en{" "}
-              {lobby.club} · {lobby.cancha}.
+              Esta acción cancela el lobby del {fecha} a las {lobby.turno.hora} en la Cancha {lobby.turno.cancha.nro_cancha}. No se puede deshacer.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-2 text-sm text-muted-foreground space-y-1">
-            <div>
-              <span className="font-semibold text-foreground">Fecha:</span> {lobby.fecha} · {lobby.hora}
-            </div>
-            <div>
-              <span className="font-semibold text-foreground">Cancha:</span> {lobby.club} · {lobby.cancha}
-            </div>
-            <div>
-              <span className="font-semibold text-foreground">Duración:</span> {lobby.duracionMin} min
-            </div>
-          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmOpen(false)}>
-              Cancelar
+              Volver
             </Button>
-            <Button
-              onClick={() => {
-                setConfirmed(true);
-                setConfirmOpen(false);
-              }}
-            >
-              Confirmar
+            <Button variant="destructive" onClick={() => setConfirmOpen(false)}>
+              Cancelar lobby
             </Button>
           </DialogFooter>
         </DialogContent>
