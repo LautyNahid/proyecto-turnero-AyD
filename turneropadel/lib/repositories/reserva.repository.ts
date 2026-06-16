@@ -47,6 +47,7 @@ export interface ReservaRepository {
   findAll(): Promise<ReservaWithRelations[]>;
   findById(id_reserva: number): Promise<ReservaWithRelations | null>;
   findByTurnoId(id_turno: number): Promise<Reserva | null>;
+  findByJugadorId(id_jugador: string): Promise<ReservaWithRelations[]>;
   create(data: CreateReservaData): Promise<ReservaWithRelations>;
   createWithTurno(data: CreateReservaWithTurnoData): Promise<ReservaWithRelations>;
   delete(id_reserva: number): Promise<ReservaWithRelations>;
@@ -70,6 +71,14 @@ export class PrismaReservaRepository implements ReservaRepository {
   findByTurnoId(id_turno: number) {
     return db.reserva.findUnique({
       where: { id_turno },
+    });
+  }
+
+  findByJugadorId(id_jugador: string) {
+    return db.reserva.findMany({
+      where: { id_jugador },
+      include: reservaInclude,
+      orderBy: { creada_en: "desc" },
     });
   }
 
