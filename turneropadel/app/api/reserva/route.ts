@@ -3,8 +3,18 @@ import { requireAuth } from "@/lib/auth";
 import { routeErrorResponse } from "@/lib/http/rest-response";
 import { reservaService } from "@/lib/services/reserva.service";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const soloMias = searchParams.get("jugador") === "me";
+
+    if (soloMias) {
+      const { userId, response } = await requireAuth();
+      if (response) return response;
+      const reservas = await reservaService.obtenerReservasPorJugador(userId!);
+      return NextResponse.json(reservas);
+    }
+
     const reservas = await reservaService.obtenerReservas();
     return NextResponse.json(reservas);
   } catch (error) {
