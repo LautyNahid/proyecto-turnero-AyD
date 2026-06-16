@@ -106,6 +106,10 @@ export class ReservaService {
     return this.repository.findAll();
   }
 
+  obtenerReservasPorJugador(id_jugador: string) {
+  return this.repository.findByJugadorId(id_jugador);
+}
+
   async obtenerReservaPorId(idParam: string) {
     const id_reserva = parseReservaId(idParam);
     const reserva = await this.repository.findById(id_reserva);
@@ -237,3 +241,4 @@ export class ReservaService {
 }
 
 export const reservaService = new ReservaService(reservaRepository, turnoRepository, jugadorRepository, canchaRepository);
+
