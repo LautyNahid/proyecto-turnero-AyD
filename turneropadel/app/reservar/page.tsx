@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useClima } from "@/hooks/useClima";
+import dynamic from "next/dynamic";
 
 type Cancha = {
   id_cancha: number;
@@ -43,6 +44,11 @@ const DEFAULT_PRICE = 12000;
 const OCCUPIED_STATES = ["Reservado", "EnCurso", "Finalizado"];
 
 const dayNames = ["DOM", "LUN", "MAR", "MIE", "JUE", "VIE", "SAB"];
+
+const MapaComplejo = dynamic(
+  () => import("@/components/mapa/MapaComplejo").then((mod) => mod.MapaComplejo),
+  { ssr: false, loading: () => <p className="text-sm text-muted-foreground">Cargando mapa...</p> },
+);
 
 function getDateKey(date: Date) {
   const year = date.getFullYear();
@@ -336,6 +342,15 @@ export default function Reservar() {
               <Legend color="bg-lime" label="Seleccionado" />
             </div>
           </div>
+
+          {activeCanchas.length > 0 && (
+            <div className="mt-6 bg-card rounded-2xl border border-border shadow-soft p-5">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-3">
+                Ubicacion del complejo
+              </div>
+              <MapaComplejo idCancha={activeCanchas[0].id_cancha} />
+            </div>
+          )}
         </div>
 
         <aside>
