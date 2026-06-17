@@ -27,7 +27,7 @@ const navMain = [
 
 const navAdmin = [
   { to: "/admin", label: "Complejo", icon: Building2 },
-  { to: "/admin/lobby", label: "Lobbies", icon: Users2 }, 
+  { to: "/admin/reservas", label: "Reservas", icon: Users2 }, 
   { to: "/admin/reportes", label: "Reportes", icon: BarChart3 },
 ];
 
@@ -41,7 +41,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="h-screen flex overflow-hidden bg-background">
       <aside className="hidden md:flex w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
         <div className="px-6 py-6 flex items-center gap-2">
           <div className="size-9 rounded-xl bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground">
@@ -144,7 +144,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
             </div>
           </div>
         </header>
-        <main className="flex-1 p-6 lg:p-8 max-w-[1400px] w-full mx-auto">
+        <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-[1400px] w-full mx-auto">
           {children}
         </main>
       </div>
