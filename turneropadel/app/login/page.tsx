@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+// Eliminamos Link si no se usa, o lo mantenemos para no romper nada
+import Link from "next/link"; 
 import { useRouter } from "next/navigation";
 import { Trophy, Mail, Lock, User as UserIcon, Building2, Shield } from "lucide-react";
 
@@ -42,7 +43,7 @@ export default function Login() {
           </div>
         </div>
         <div className="absolute right-0 bottom-0 size-[500px] rounded-full bg-lime/10 blur-3xl" />
-        <div className="text-xs text-primary-foreground/50">© 2025 SalePadel · Demo académica</div>
+        <div className="text-xs text-primary-foreground/50">© 2026 SalePadel · Demo académica</div>
       </div>
 
       <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-background">
@@ -101,15 +102,24 @@ export default function Login() {
               </div>
             </div>
 
-            <button
-              onClick={() => router.push("/")}
-              className="block w-full bg-primary text-primary-foreground font-semibold py-3 rounded-xl text-center hover:opacity-90 transition"
-            >
-              {mode === "login" ? "Entrar" : "Crear cuenta"}
-            </button>
+            {/* AQUI ESTÁ EL CAMBIO: Dos botones que redirigen a las rutas reales de Clerk */}
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => router.push("/sign-in")}
+                className="flex-1 bg-primary text-primary-foreground border border-primary font-semibold py-3 rounded-xl text-center hover:opacity-90 transition"
+              >
+                Iniciar Sesión
+              </button>
+              <button
+                onClick={() => router.push("/sign-up")}
+                className="flex-1 bg-transparent text-foreground border border-input font-semibold py-3 rounded-xl text-center hover:bg-muted transition"
+              >
+                Registrarse
+              </button>
+            </div>
 
-            <div className="text-center text-xs text-muted-foreground">
-              {mode === "login" ? "¿Olvidaste tu contraseña?" : "Al registrarte aceptás nuestros términos"}
+            <div className="text-center text-xs text-muted-foreground mt-2">
+              Al continuar serás redirigido a la plataforma segura de acceso.
             </div>
           </div>
         </div>
