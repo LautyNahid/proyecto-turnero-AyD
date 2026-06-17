@@ -112,7 +112,7 @@ export default function Home() {
         <SectionHeader
           title="Partidos abiertos"
           subtitle="Sumate a un partido que necesita jugadores"
-          action={{ label: "Crear nuevo", href: "/lobby", icon: true }}
+          action={{ label: "Crear nuevo", href: "/reservar", icon: true }}
         />
         {loadingLobbies ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
