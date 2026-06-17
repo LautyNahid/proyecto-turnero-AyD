@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { MisPartidosList } from "@/components/partidos/MisPartidosList";
 import { LobbyDetail } from "@/components/partidos/LobbyDetail";
+import { ReservaDetail } from "@/components/partidos/ReservaDetail";
+import { PanelSkeleton } from "@/components/partidos/PanelSkeleton";
 import {
   Sheet,
   SheetContent,
@@ -13,10 +15,10 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLobby } from "@/hooks/useLobby";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
-import type { Partido, PartidoLobby } from "@/lib/types";
-import { PanelSkeleton } from "@/components/partidos/PanelSkeleton";
+import type { ReservaWithRelations } from "@/lib/repositories/reserva.repository";
+import type { Partido, PartidoLobby, PartidoReserva } from "@/lib/types";
 
-// ─── Mapper DB → Partido UI ───────────────────────────────────────────────────
+// ─── Mappers ──────────────────────────────────────────────────────────────────
 
 function toLobbyPartido(lobby: LobbyConRelaciones): PartidoLobby {
   const jugadoresConfirmados = lobby.jugadores.map((lj, i) => ({
@@ -56,13 +58,32 @@ function toLobbyPartido(lobby: LobbyConRelaciones): PartidoLobby {
   };
 }
 
+function toReservaPartido(reserva: ReservaWithRelations): PartidoReserva {
+  return {
+    id: reserva.id_reserva,
+    tipo: "reserva",
+    fecha: new Date(reserva.turno.fecha).toLocaleDateString("es-AR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    }),
+    hora: reserva.turno.hora,
+    club: `Cancha ${reserva.turno.cancha.nro_cancha}`,
+    cancha: `Cancha ${reserva.turno.cancha.nro_cancha}`,
+    duracionMin: 90,
+    jugadoresConfirmados: 1,
+  };
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MisPartidosPage() {
   const isMobile = useIsMobile();
-  const [lobbies, setLobbies] = useState<LobbyConRelaciones[]>([]);
+  const [partidos, setPartidos] = useState<Partido[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedTipo, setSelectedTipo] = useState<"lobby" | "reserva" | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const {
@@ -75,43 +96,75 @@ export default function MisPartidosPage() {
     expulsarJugador,
   } = useLobby(selectedId ?? 0);
 
-  // Carga inicial de lobbies del usuario
   useEffect(() => {
-    async function fetchLobbies() {
+    async function fetchPartidos() {
+      setLoading(true);
       try {
-        const res = await fetch("/api/lobby");
-        const json = await res.json();
-        if (!res.ok) {
-          setFetchError(json.error ?? "Error al cargar partidos");
-          return;
-        }
-        const data = json.data as LobbyConRelaciones[];
-        setLobbies(data);
-        if (data.length > 0) {
-          setSelectedId(data[0].id_lobby);
+        const [resLobbies, resReservas] = await Promise.all([
+          fetch("/api/lobby"),
+          fetch("/api/reserva?jugador=me"),
+        ]);
+
+        const lobbiesJson = resLobbies.ok ? await resLobbies.json() : { data: [] };
+        const reservasJson = resReservas.ok ? await resReservas.json() : [];
+
+        const lobbies = (lobbiesJson.data as LobbyConRelaciones[]).map(toLobbyPartido);
+        const reservas = (Array.isArray(reservasJson) ? reservasJson as ReservaWithRelations[] : []).map(toReservaPartido);
+
+        const todos: Partido[] = [...lobbies, ...reservas];
+
+        setPartidos(todos);
+        if (todos.length > 0) {
+          setSelectedId(todos[0].id);
+          setSelectedTipo(todos[0].tipo);
         }
       } catch {
         setFetchError("Error de red");
+      } finally {
+        setLoading(false);
       }
     }
 
-    fetchLobbies();
+    fetchPartidos();
   }, []);
 
-  // Carga detalle cuando cambia el seleccionado
   useEffect(() => {
-    if (selectedId) cargarLobby(selectedId);
-  }, [selectedId, cargarLobby]);
+    if (selectedId && selectedTipo === "lobby") cargarLobby(selectedId);
+  }, [selectedId, selectedTipo, cargarLobby]);
 
   function handleSelect(id: number) {
+    const partido = partidos.find((p) => p.id === id);
+    if (!partido) return;
     setSelectedId(id);
+    setSelectedTipo(partido.tipo);
     if (isMobile) setSheetOpen(true);
   }
 
-  const partidos: Partido[] = lobbies.map(toLobbyPartido);
+  const selectedPartido = partidos.find((p) => p.id === selectedId) ?? null;
 
   const detailPanel = (() => {
-    if (estado === "loading") return <PanelSkeleton />;
+    if (loading || estado === "loading") return <PanelSkeleton />;
+
+    if (fetchError) {
+      return (
+        <div className="flex-1 flex items-center justify-center text-destructive text-sm">
+          {fetchError}
+        </div>
+      );
+    }
+
+    if (!selectedPartido) {
+      return (
+        <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+          Seleccioná un partido para ver los detalles.
+        </div>
+      );
+    }
+
+    if (selectedPartido.tipo === "reserva") {
+      return <ReservaDetail reserva={selectedPartido} />;
+    }
+
     if (lobbyError) {
       return (
         <div className="flex-1 flex items-center justify-center text-destructive text-sm">
@@ -119,13 +172,8 @@ export default function MisPartidosPage() {
         </div>
       );
     }
-    if (!lobbyDetalle) {
-      return (
-        <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-          Seleccioná un partido para ver los detalles.
-        </div>
-      );
-    }
+
+    if (!lobbyDetalle) return <PanelSkeleton />;
 
     return (
       <LobbyDetail
@@ -136,16 +184,6 @@ export default function MisPartidosPage() {
       />
     );
   })();
-
-  if (fetchError) {
-    return (
-      <AppShell>
-        <div className="flex items-center justify-center h-full text-destructive text-sm">
-          {fetchError}
-        </div>
-      </AppShell>
-    );
-  }
 
   return (
     <AppShell>
@@ -175,8 +213,8 @@ export default function MisPartidosPage() {
           <SheetContent side="bottom" className="h-[90vh] overflow-y-auto rounded-t-2xl">
             <SheetHeader className="mb-4">
               <SheetTitle>
-                {lobbyDetalle
-                  ? `${new Date(lobbyDetalle.turno.fecha).toLocaleDateString("es-AR")} · ${lobbyDetalle.turno.hora}`
+                {selectedPartido
+                  ? `${selectedPartido.fecha} · ${selectedPartido.hora}`
                   : "Detalle"}
               </SheetTitle>
             </SheetHeader>
