@@ -5,6 +5,8 @@ import type { Lobby, Solicitud } from "@prisma/client";
 import type { EstadoLobby } from "@prisma/client";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
 import * as repo from "@/lib/repositories/lobby.repository";
+import { confirmarLobby } from "@/lib/services/lobby-reserva.service";
+import { emitir } from "@/lib/events";
 
 //Types
 
@@ -101,6 +103,7 @@ export async function crearLobby(
 
       const nuevo = await repo.createLobby(tx, { id_turno, id_creador, jugadores_faltantes });
       await repo.createInscripcion(tx, nuevo.id_lobby, id_creador);
+      await repo.lockTurnoParaLobby(tx, id_turno);
 
       return nuevo;
     });
@@ -197,7 +200,7 @@ export async function responderSolicitud(
 
       if (accion === "rechazar") {
         const actualizada = await repo.updateEstadoSolicitud(tx, id_solicitud, "Rechazada");
-        return { solicitud: actualizada, lobby_confirmado: false };
+        return { solicitud: actualizada, faltantesRestantes: lobby.jugadores_faltantes, id_turno: lobby.id_turno };
       }
 
       assertHayCupos(lobby.jugadores_faltantes);
@@ -206,15 +209,23 @@ export async function responderSolicitud(
       await repo.createInscripcion(tx, id_lobby, solicitud.id_jugador);
 
       const nuevosFaltantes = lobby.jugadores_faltantes - 1;
-      const lobbyActualizado = await repo.decrementarFaltantes(tx, id_lobby, nuevosFaltantes);
+      await repo.decrementarFaltantes(tx, id_lobby, nuevosFaltantes);
 
-      return {
-        solicitud: solicitudActualizada,
-        lobby_confirmado: lobbyActualizado.estado_lobby === "Confirmado",
-      };
+      return { solicitud: solicitudActualizada, faltantesRestantes: nuevosFaltantes, id_turno: lobby.id_turno };
     });
 
-    return ok(resultado);
+    const lobbyCompleto = resultado.faltantesRestantes === 0;
+    let lobby_confirmado = false;
+
+    if (lobbyCompleto) {
+      const confirmacion = await confirmarLobby({ id_lobby, id_turno: resultado.id_turno });
+      if (confirmacion.ok) {
+        emitir("lobby.confirmado", { id_lobby });
+        lobby_confirmado = true;
+      }
+    }
+
+    return ok({ solicitud: resultado.solicitud, lobby_confirmado });
   } catch (e) {
     return fail(e instanceof Error ? e.message : "Error al responder la solicitud");
   }
@@ -259,3 +270,4 @@ export async function listarLobbiesDelJugador(
     return fail("Error al obtener lobbies del jugador");
   }
 }
+

@@ -75,6 +75,7 @@ export async function findLobbyParaValidacion(
       id_creador: true,
       estado_lobby: true,
       jugadores_faltantes: true,
+      id_turno: true,
     },
   });
 }
@@ -113,10 +114,7 @@ export async function decrementarFaltantes(
 ): Promise<Lobby> {
   return client.lobby.update({
     where: { id_lobby },
-    data: {
-      jugadores_faltantes: nuevosFaltantes,
-      ...(nuevosFaltantes === 0 ? { estado_lobby: "Confirmado" } : {}),
-    },
+    data: {jugadores_faltantes: nuevosFaltantes},
   });
 }
 
@@ -240,5 +238,23 @@ export async function findLobbiesByJugador(
     },
     include: lobbyInclude,
     orderBy: { turno: { fecha: "asc" } },
+  });
+}
+
+export async function lockTurnoParaLobby(client: DbClient, id_turno: number) {
+  return client.turno.update({
+    where: { id_turno },
+    data: { estado_turno: "Reservado" },
+  });
+}
+
+export async function confirmarLobbyConReserva(
+  client: DbClient,
+  id_lobby: number,
+  id_reserva: number
+): Promise<Lobby> {
+  return client.lobby.update({
+    where: { id_lobby },
+    data: { estado_lobby: "Confirmado", id_reserva },
   });
 }
