@@ -13,6 +13,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useClima } from "@/hooks/useClima";
 
 type Cancha = {
   id_cancha: number;
@@ -103,6 +104,11 @@ export default function Reservar() {
   const days = useMemo(() => buildDays(), []);
   const selectedDate = days[day];
   const activeCanchas = useMemo(() => canchas.filter((cancha) => cancha.activa), [canchas]);
+
+  const { clima, estado: climaEstado, error: climaError } = useClima(
+    selected?.fecha ?? null,
+    selected?.hora ?? null,
+  );
 
   const turnosForSelectedDay = useMemo(
     () => turnos.filter((turno) => turno.fecha.slice(0, 10) === selectedDate.key),
@@ -341,6 +347,21 @@ export default function Reservar() {
                 <div className="text-sm text-muted-foreground">
                   {selected.fecha} - {selected.hora} a {addHour(selected.hora)}
                 </div>
+
+                <div className="mt-2 flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+                <Cloud className="size-5 text-primary shrink-0" />
+                {climaEstado === "loading" ? (
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Loader2 className="size-3 animate-spin" /> Consultando el clima...
+                  </span>
+                ) : climaError ? (
+                  <span className="text-muted-foreground">{climaError}</span>
+                ) : clima ? (
+                  <span className="font-semibold">
+                    {Math.round(clima.temperatura_celsius)}&deg; - {clima.descripcion}
+                  </span>
+                ) : null}
+              </div>
 
                 <div className="mt-5 space-y-3 text-sm">
                   <Row label="Duracion" value="90 min" />
