@@ -129,7 +129,7 @@ export class ReservaService {
   const payload = ensureObject(body);
 
   if ("id_lobby" in payload) {
-    return this.crearReservaDesdeLobby(payload);
+    return this.crearReservaDesdeLobby(payload, idJugadorAutenticado);
   }
 
   const id_jugador = idJugadorAutenticado ?? parseJugadorId(payload.id_jugador);
@@ -189,10 +189,10 @@ export class ReservaService {
   }
 }
 
-private async crearReservaDesdeLobby(payload: Record<string, unknown>) {
+private async crearReservaDesdeLobby(payload: Record<string, unknown>, idJugadorAutenticado?: string) {
   const id_lobby = parsePositiveInteger(payload.id_lobby, "id_lobby");
-  const id_turno = parsePositiveInteger(payload.id_turno, "id_turno");
-  const id_jugador = parseJugadorId(payload.id_jugador);
+  const id_turno = parseTurnoIdFromLobby(payload.id_turno);
+  const id_jugador = idJugadorAutenticado ?? parseJugadorId(payload.id_jugador);
 
   await this.ensureJugadorExists(id_jugador);
   await this.ensureTurnoBloqueadoPorLobby(id_turno, id_lobby);
