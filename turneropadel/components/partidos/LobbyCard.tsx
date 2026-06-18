@@ -10,11 +10,17 @@ interface LobbyCardProps {
 
 export function LobbyCard({ lobby, onClick }: LobbyCardProps) {
   const jugadoresActivos = lobby.jugadores.length;
-  const fecha = parseLocalDate(lobby.turno.fecha).toLocaleDateString("es-AR", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
+  const fecha = lobby.turno
+    ? parseLocalDate(lobby.turno.fecha).toLocaleDateString("es-AR", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      })
+    : "Sin turno";
+
+  const hora = lobby.turno?.hora ?? "—";
+  const cancha = lobby.turno?.cancha?.nro_cancha ?? "—";
+  const precio = lobby.turno?.precio ? Number(lobby.turno.precio).toLocaleString("es-AR") : "-";
 
   return (
     <button
@@ -31,14 +37,14 @@ export function LobbyCard({ lobby, onClick }: LobbyCardProps) {
         </span>
       </div>
       <div className="mt-3 font-bold leading-tight">
-        Cancha {lobby.turno.cancha.nro_cancha}
+        Cancha {cancha}
       </div>
       <div className="text-xs text-muted-foreground">
         Cat. {lobby.creador.categoria}
       </div>
       <div className="mt-3 text-sm font-semibold flex items-center gap-1.5">
         <Clock className="size-3.5" />
-        {fecha} · {lobby.turno.hora}
+        {fecha} · {hora}
       </div>
       <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
         <div className="flex -space-x-1.5">
@@ -56,7 +62,7 @@ export function LobbyCard({ lobby, onClick }: LobbyCardProps) {
           ))}
         </div>
         <div className="text-sm font-bold">
-          ${Number(lobby.turno.precio).toLocaleString("es-AR")}
+          ${precio}
         </div>
       </div>
     </button>

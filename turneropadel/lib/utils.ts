@@ -21,3 +21,11 @@ export function parseLocalDate(fecha: string | Date): Date {
   // Fallback to native parser for other formats
   return new Date(s);
 }
+
+export function formatLocalDate(fecha: string | Date | null | undefined, options?: Intl.DateTimeFormatOptions) {
+  if (fecha === null || fecha === undefined || fecha === "") {
+    return "Sin fecha";
+  }
+
+  return parseLocalDate(fecha).toLocaleDateString("es-AR", options);
+}

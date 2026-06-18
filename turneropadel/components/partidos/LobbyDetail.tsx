@@ -77,11 +77,17 @@ export function LobbyDetail({
   );
   const jugadoresConfirmados = lobby.jugadores.length;
   const lugaresVacios = lobby.jugadores_faltantes;
-  const fecha = parseLocalDate(lobby.turno.fecha).toLocaleDateString("es-AR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+  const tieneTurno = Boolean(lobby.turno);
+  const fecha = tieneTurno
+    ? parseLocalDate(lobby.turno!.fecha).toLocaleDateString("es-AR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      })
+    : "Turno no asignado";
+  const hora = lobby.turno?.hora ?? "—";
+  const cancha = lobby.turno?.cancha?.nro_cancha ?? "—";
+  const nombreLobby = tieneTurno ? `Cancha ${cancha} · ${hora}` : "Turno no asignado";
   const [chatOpen, setChatOpen] = useState(false);
 
   async function handleAceptar(id_solicitud: number) {
@@ -108,11 +114,11 @@ export function LobbyDetail({
             <div className="text-xs uppercase tracking-wider text-primary-foreground/60">
               Próximo partido
             </div>
-            <div className="mt-1 text-3xl font-bold capitalize">{fecha} · {lobby.turno.hora}</div>
+            <div className="mt-1 text-3xl font-bold capitalize">{fecha} · {hora}</div>
             <div className="mt-2 flex flex-wrap gap-3 text-sm text-primary-foreground/80">
               <span className="flex items-center gap-1">
                 <MapPin className="size-3.5 shrink-0" />
-                Cancha {lobby.turno.cancha.nro_cancha}
+                Cancha {cancha}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="size-3.5 shrink-0" />
@@ -210,7 +216,7 @@ export function LobbyDetail({
           <DialogHeader>
             <DialogTitle>Cancelar lobby</DialogTitle>
             <DialogDescription>
-              Esta acción cancela el lobby del {fecha} a las {lobby.turno.hora} en la Cancha {lobby.turno.cancha.nro_cancha}. No se puede deshacer.
+              Esta acción cancela el lobby del {fecha} a las {hora} en la Cancha {cancha}. No se puede deshacer.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -230,7 +236,7 @@ export function LobbyDetail({
       <LobbyChat
         open={chatOpen}
         onOpenChange={setChatOpen}
-        nombreLobby={`Cancha ${lobby.turno.cancha.nro_cancha} · ${lobby.turno.hora}`}
+        nombreLobby={nombreLobby}
       />
     </div>
   );

@@ -41,17 +41,20 @@ function toLobbyPartido(lobby: LobbyConRelaciones): PartidoLobby {
     status: "empty" as const,
   }));
 
+  const tieneTurno = Boolean(lobby.turno);
   return {
     id: lobby.id_lobby,
     tipo: "lobby",
-    fecha: parseLocalDate(lobby.turno.fecha).toLocaleDateString("es-AR", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    }),
-    hora: lobby.turno.hora,
-    club: `Cancha ${lobby.turno.cancha.nro_cancha}`,
-    cancha: `Cancha ${lobby.turno.cancha.nro_cancha}`,
+    fecha: tieneTurno
+      ? parseLocalDate(lobby.turno!.fecha).toLocaleDateString("es-AR", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        })
+      : "Sin turno",
+    hora: lobby.turno?.hora ?? "—",
+    club: tieneTurno ? `Cancha ${lobby.turno!.cancha.nro_cancha}` : "Turno no asignado",
+    cancha: tieneTurno ? `Cancha ${lobby.turno!.cancha.nro_cancha}` : "Turno no asignado",
     duracionMin: 90,
     estado: lobby.estado_lobby,
     jugadores: [...jugadoresConfirmados, ...lugaresVacios],
@@ -102,17 +105,17 @@ export default function MisPartidosPage() {
     async function fetchPartidos() {
       setLoading(true);
       try {
+        
         const [resLobbies, resReservas] = await Promise.all([
           fetch("/api/lobby"),
           fetch("/api/reserva?jugador=me"),
         ]);
-
+        
         const lobbiesJson = resLobbies.ok ? await resLobbies.json() : { data: [] };
         const reservasJson = resReservas.ok ? await resReservas.json() : [];
-
+        
         const lobbies = (lobbiesJson.data as LobbyConRelaciones[]).map(toLobbyPartido);
         const reservas = (Array.isArray(reservasJson) ? reservasJson as ReservaWithRelations[] : []).map(toReservaPartido);
-        console.log(lobbies);
 
         const todos: Partido[] = [...lobbies, ...reservas];
 

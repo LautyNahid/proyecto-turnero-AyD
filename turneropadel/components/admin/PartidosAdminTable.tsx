@@ -11,7 +11,8 @@ type EstadoTurno = "Disponible" | "Reservado" | "EnCurso" | "Finalizado";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatFecha(fecha: string | Date): string {
+function formatFecha(fecha: string | Date | null | undefined): string {
+  if (fecha === null || fecha === undefined) return "Sin fecha";
   return parseLocalDate(fecha).toLocaleDateString("es-AR", {
     weekday: "short",
     day: "numeric",
@@ -106,7 +107,7 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query }: Partido
       return (
         String(l.id_lobby).includes(q) ||
         `${l.creador.usuario.nombre} ${l.creador.usuario.apellido}`.toLowerCase().includes(q) ||
-        `cancha ${l.turno.cancha.nro_cancha}`.toLowerCase().includes(q)
+        `cancha ${l.turno?.cancha?.nro_cancha ?? "sin turno"}`.toLowerCase().includes(q)
       );
     });
 
@@ -159,12 +160,12 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query }: Partido
                   <td className="p-3 pl-5 font-mono text-xs text-muted-foreground">L-{lobby.id_lobby}</td>
                   <td className="p-3"><TypeBadge tipo="lobby" /></td>
                   <td className="p-3">
-                    <div className="font-semibold">{formatFecha(lobby.turno.fecha)}</div>
-                    <div className="text-xs text-muted-foreground">{lobby.turno.hora} hs</div>
+                    <div className="font-semibold">{formatFecha(lobby.turno?.fecha)}</div>
+                    <div className="text-xs text-muted-foreground">{lobby.turno?.hora ?? "—"} hs</div>
                   </td>
                   <td className="p-3">
                     <div className="inline-flex items-center gap-1.5 text-muted-foreground">
-                      <MapPin className="size-3.5" /> Cancha {lobby.turno.cancha.nro_cancha}
+                      <MapPin className="size-3.5" /> Cancha {lobby.turno?.cancha?.nro_cancha ?? "—"}
                     </div>
                   </td>
                   <td className="p-3 font-semibold">
@@ -175,7 +176,7 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query }: Partido
                   </td>
                   <td className="p-3"><StatusBadge estado={lobby.estado_lobby} /></td>
                   <td className="p-3 text-right font-semibold">
-                    ${Number(lobby.turno.precio).toLocaleString("es-AR")}
+                    ${lobby.turno?.precio ? Number(lobby.turno.precio).toLocaleString("es-AR") : "-"}
                   </td>
                   <td className="p-3 pr-5 text-right">
                     <button className="size-8 rounded-lg hover:bg-muted inline-flex items-center justify-center text-muted-foreground">
