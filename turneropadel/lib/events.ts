@@ -1,11 +1,13 @@
 import { EventEmitter } from "events";
 
-// Tipos de eventos 
+// Tipos de eventos
 
 type EventosApp = {
   "lobby.confirmado": { id_lobby: number };
   "solicitud.aceptada": { id_lobby: number; id_jugador: string };
   "solicitud.rechazada": { id_lobby: number; id_jugador: string };
+  "reserva.confirmada": { id_reserva: number };
+  "reserva.cancelada": { id_reserva: number };
 };
 
 type NombreEvento = keyof EventosApp;
@@ -19,16 +21,21 @@ class AppEventEmitter extends EventEmitter {
 
   escuchar<K extends NombreEvento>(
     evento: K,
-    handler: (payload: EventosApp[K]) => void
+    handler: (payload: EventosApp[K]) => void,
   ): this {
     return this.on(evento, handler);
   }
 }
 
-const appEvents = new AppEventEmitter();
+const globalForEvents = globalThis as unknown as {
+  appEvents?: AppEventEmitter;
+};
+const appEvents = globalForEvents.appEvents ?? new AppEventEmitter();
+globalForEvents.appEvents = appEvents;
+
 appEvents.setMaxListeners(20);
 
-// Exports 
+// Exports
 
 export const emitir = appEvents.emitir.bind(appEvents);
 export const escuchar = appEvents.escuchar.bind(appEvents);

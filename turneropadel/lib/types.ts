@@ -17,15 +17,18 @@ export function fail(error: string): ApiResponse<null> {
   return { data: null, error };
 }
 
-
 //dominio de partidos UI
 
 export type EstadoLobby = "Abierto" | "Confirmado" | "Finalizado" | "Cancelado";
-export type EstadoSolicitud = "Pendiente" | "Aceptada" | "Rechazada" | "Cancelada";
+export type EstadoSolicitud =
+  | "Pendiente"
+  | "Aceptada"
+  | "Rechazada"
+  | "Cancelada";
 export type EstadoJugadorSlot = "confirmed" | "pending" | "empty";
- 
+
 export interface JugadorSlot {
-  id: number | string; 
+  id: number | string;
   name: string | null;
   initials: string;
   level: string | null;
@@ -33,7 +36,7 @@ export interface JugadorSlot {
   status: EstadoJugadorSlot;
   host?: boolean;
 }
- 
+
 export interface Solicitud {
   id: number;
   name: string;
@@ -41,7 +44,7 @@ export interface Solicitud {
   level: string;
   side: string;
 }
- 
+
 export interface PartidoBase {
   id: number;
   fecha: string;
@@ -50,12 +53,12 @@ export interface PartidoBase {
   cancha: string;
   duracionMin: number;
 }
- 
+
 export interface PartidoReserva extends PartidoBase {
   tipo: "reserva";
   jugadoresConfirmados: number;
 }
- 
+
 export interface PartidoLobby extends PartidoBase {
   tipo: "lobby";
   estado: EstadoLobby;
@@ -63,5 +66,12 @@ export interface PartidoLobby extends PartidoBase {
   solicitudes: Solicitud[];
   clima?: string;
 }
- 
+
 export type Partido = PartidoReserva | PartidoLobby;
+
+//tipos para templates de mails
+export interface DatosReservaMail {
+  nombreJugador: string;
+  fechaReserva: string; // o string si lo formateás antes
+  nombreCancha: number;
+}

@@ -48,6 +48,8 @@ enum TipoNotificacion {
   SolicitudAceptada
   JugadorExpulsado
   CancelacionLobby
+  ReservaConfirmada
+  ReservaCancelada
 }
 
 // ─── IDENTITY ────────────────────────────────────────────────────────────────
@@ -113,6 +115,7 @@ model Cancha {
   id_cancha  Int     @id @default(autoincrement())
   nro_cancha Int     @unique
   activa     Boolean @default(true)
+  precio     Float?
 
   turnos Turno[]
 

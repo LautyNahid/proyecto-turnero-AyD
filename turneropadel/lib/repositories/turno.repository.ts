@@ -32,6 +32,7 @@ export interface TurnoRepository {
   create(data: CreateTurnoData): Promise<Turno>;
   update(id_turno: number, data: UpdateTurnoData): Promise<Turno>;
   delete(id_turno: number): Promise<Turno>;
+  updatePrecioDisponibles(id_cancha: number, precio: number, hoy: Date): Promise<number>;
 }
 
 export class PrismaTurnoRepository implements TurnoRepository {
@@ -88,6 +89,18 @@ export class PrismaTurnoRepository implements TurnoRepository {
       data,
     });
   }
+
+  async updatePrecioDisponibles(id_cancha: number, precio: number, hoy: Date): Promise<number> {
+  const result = await db.turno.updateMany({
+    where: {
+      id_cancha,
+      estado_turno: "Disponible",
+      fecha: { gte: hoy },
+    },
+    data: { precio },
+  });
+  return result.count;
+}
 
   delete(id_turno: number) {
     return db.turno.delete({
