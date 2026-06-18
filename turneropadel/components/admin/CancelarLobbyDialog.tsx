@@ -16,8 +16,10 @@ interface CancelarLobbyDialogProps {
   onCerrar: () => void;
 }
 
-function formatFecha(fecha: Date): string {
-  return new Date(fecha).toLocaleDateString("es-AR", {
+import { parseLocalDate } from "@/lib/utils";
+
+function formatFecha(fecha: string | Date): string {
+  return parseLocalDate(fecha).toLocaleDateString("es-AR", {
     weekday: "short",
     day: "numeric",
     month: "short",

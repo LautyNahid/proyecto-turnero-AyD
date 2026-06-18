@@ -15,6 +15,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLobby } from "@/hooks/useLobby";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
+import { parseLocalDate } from "@/lib/utils";
 import type { ReservaWithRelations } from "@/lib/repositories/reserva.repository";
 import type { Partido, PartidoLobby, PartidoReserva } from "@/lib/types";
 
@@ -43,7 +44,7 @@ function toLobbyPartido(lobby: LobbyConRelaciones): PartidoLobby {
   return {
     id: lobby.id_lobby,
     tipo: "lobby",
-    fecha: new Date(lobby.turno.fecha).toLocaleDateString("es-AR", {
+    fecha: parseLocalDate(lobby.turno.fecha).toLocaleDateString("es-AR", {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -62,7 +63,7 @@ function toReservaPartido(reserva: ReservaWithRelations): PartidoReserva {
   return {
     id: reserva.id_reserva,
     tipo: "reserva",
-    fecha: new Date(reserva.turno.fecha).toLocaleDateString("es-AR", {
+    fecha: parseLocalDate(reserva.turno.fecha).toLocaleDateString("es-AR", {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -110,6 +111,7 @@ export default function MisPartidosPage() {
 
         const lobbies = (lobbiesJson.data as LobbyConRelaciones[]).map(toLobbyPartido);
         const reservas = (Array.isArray(reservasJson) ? reservasJson as ReservaWithRelations[] : []).map(toReservaPartido);
+        console.log(lobbies);
 
         const todos: Partido[] = [...lobbies, ...reservas];
 
