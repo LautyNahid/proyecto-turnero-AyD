@@ -142,6 +142,18 @@ export default function MisPartidosPage() {
 
   const selectedPartido = partidos.find((p) => p.id === selectedId) ?? null;
 
+  useEffect(() => {
+    if (selectedTipo !== "lobby" || !lobbyDetalle) return;
+
+    setPartidos((current) =>
+      current.map((partido) =>
+        partido.tipo === "lobby" && partido.id === lobbyDetalle.id_lobby
+          ? toLobbyPartido(lobbyDetalle)
+          : partido
+      )
+    );
+  }, [lobbyDetalle, selectedTipo]);
+
   const detailPanel = (() => {
     if (loading || estado === "loading") return <PanelSkeleton />;
 

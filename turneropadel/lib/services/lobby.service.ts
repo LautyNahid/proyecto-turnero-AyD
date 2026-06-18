@@ -284,9 +284,9 @@ export async function expulsarJugador(
       const lobby = await repo.findLobbyParaValidacion(tx, id_lobby);
       assertLobbyExiste(lobby);
       assertEsOrganizador(lobby.id_creador, id_organizador);
+      
+      assertLobbyAbierto(lobby.estado_lobby);
 
-      if (lobby.estado_lobby === "Finalizado" || lobby.estado_lobby === "Cancelado")
-        throw new Error("No se puede expulsar jugadores de un lobby finalizado o cancelado");
       if (lobby.id_creador === id_jugador)
         throw new Error("El organizador no puede expulsarse a sí mismo");
 
