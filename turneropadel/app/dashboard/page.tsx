@@ -1,28 +1,42 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { StatCard } from "@/components/ui/StatCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { LobbyCard, LobbyCardSkeleton } from "@/components/partidos/LobbyCard";
 import { LobbySheet } from "@/components/partidos/LobbySheet";
-import { CalendarRange, MapPin, Users2, Clock, ChevronRight, Trophy, Flame } from "lucide-react";
+import { CalendarRange, MapPin, Users2, Clock, ChevronRight, Trophy, Flame, Star, MessageCircle } from "lucide-react";
+import { usePerfil } from "@/hooks/usePerfil";
+import { useAgenda } from "@/hooks/useAgenda";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
 
 // ─── Mock data Par 1 (no tocar) ───────────────────────────────────────────────
 
-const upcoming = [
-  { id: 1, club: "Club Norte", date: "Hoy", time: "20:00", court: "Cancha 3", players: ["MR", "JL", "PA", "DE"] },
-  { id: 2, club: "Padel House", date: "Sáb", time: "10:30", court: "Cancha 1", players: ["MR", "JL", "?", "?"] },
-];
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
+  const { user, isLoaded } = useUser();
+  const idUsuario = isLoaded ? user?.id ?? null : null;
+  const { perfil } = usePerfil(idUsuario);
+  const { agenda } = useAgenda(idUsuario);
+  const [now] = useState(() => Date.now());
   const [lobbies, setLobbies] = useState<LobbyConRelaciones[]>([]);
   const [loadingLobbies, setLoadingLobbies] = useState(true);
   const [selectedLobby, setSelectedLobby] = useState<LobbyConRelaciones | null>(null);
+  const proximos = agenda.filter((reserva) => reserva.turno.estado_turno !== "Finalizado");
+  const proximosOrdenados = proximos
+    .map((reserva) => ({
+      reserva,
+      fechaTurno: getTurnoDate(reserva.turno.fecha, reserva.turno.hora),
+    }))
+    .filter(({ fechaTurno }) => fechaTurno.getTime() >= now)
+    .sort((a, b) => a.fechaTurno.getTime() - b.fechaTurno.getTime())
+    .slice(0, 2);
+  const valoracion = perfil ? Number(perfil.reputacion_promedio).toFixed(1) : "-";
+  const cantidadValoraciones = perfil ? String(perfil.evaluaciones_recibidas) : "-";
 
   useEffect(() => {
     async function fetchLobbies() {
@@ -69,10 +83,10 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <StatCard icon={Trophy} label="Partidos jugados" value="42" tone="primary" />
-          <StatCard icon={Users2} label="Compañeros" value="18" />
-          <StatCard icon={Clock} label="Próximos" value="2" />
-          <StatCard icon={Flame} label="Racha" value="4" tone="lime" />
+          <StatCard icon={Trophy} label="Partidos jugados" value={String(perfil?.partidos_jugados ?? "-")} tone="primary" />
+          <StatCard icon={MessageCircle} label="Valoraciones" value={cantidadValoraciones} />
+          <StatCard icon={Clock} label="Próximos" value={String(proximos.length)} />
+          <StatCard icon={Star} label="Valoración" value={valoracion} tone="lime" />
         </div>
       </section>
 
@@ -80,30 +94,36 @@ export default function Home() {
       <section className="mb-8">
         <SectionHeader title="Próximos turnos" action={{ label: "Ver todos", href: "/perfil" }} />
         <div className="grid md:grid-cols-2 gap-4">
-          {upcoming.map((u) => (
-            <div key={u.id} className="bg-card rounded-2xl p-5 shadow-soft border border-border flex items-center gap-4">
-              <div className="text-center bg-secondary rounded-xl px-4 py-2 min-w-16">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{u.date}</div>
-                <div className="text-xl font-bold">{u.time}</div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold truncate">{u.club}</div>
-                <div className="text-xs text-muted-foreground flex items-center gap-1">
-                  <MapPin className="size-3" /> {u.court}
-                </div>
-                <div className="flex -space-x-2 mt-2">
-                  {u.players.map((p, i) => (
-                    <div key={i} className={`size-7 rounded-full ring-2 ring-card text-[10px] font-bold flex items-center justify-center ${p === "?" ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground"}`}>
-                      {p}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <Link href="/lobby" className="text-muted-foreground hover:text-foreground">
-                <ChevronRight />
-              </Link>
+          {proximosOrdenados.length === 0 ? (
+            <div className="md:col-span-2 bg-card rounded-2xl p-5 shadow-soft border border-border text-center text-sm text-muted-foreground">
+              No tenés turnos próximos.
             </div>
-          ))}
+          ) : (
+            proximosOrdenados.map(({ reserva, fechaTurno }) => (
+              <Link
+                key={reserva.id_reserva}
+                href={`/partidos?tipo=reserva&id=${reserva.id_reserva}`}
+                className="bg-card rounded-2xl p-5 shadow-soft border border-border flex items-center gap-4 hover:border-primary/40 transition"
+              >
+                <div className="text-center bg-secondary rounded-xl px-4 py-2 min-w-16">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {formatTurnoDay(fechaTurno)}
+                  </div>
+                  <div className="text-xl font-bold">{reserva.turno.hora}</div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold truncate">Cancha {reserva.turno.cancha.nro_cancha}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1">
+                    <MapPin className="size-3" /> {formatTurnoDate(fechaTurno)}
+                  </div>
+                  <div className="mt-2 text-xs font-semibold text-muted-foreground">
+                    {reserva.turno.estado_turno}
+                  </div>
+                </div>
+                <ChevronRight className="text-muted-foreground" />
+              </Link>
+            ))
+          )}
         </div>
       </section>
 
@@ -143,5 +163,35 @@ export default function Home() {
         onClose={() => setSelectedLobby(null)}
       />
     </AppShell>
+  );
+}
+
+function getTurnoDate(fecha: string, hora: string) {
+  return new Date(`${fecha.slice(0, 10)}T${hora}:00`);
+}
+
+function formatTurnoDay(fecha: Date) {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  if (isSameDay(fecha, today)) return "Hoy";
+  if (isSameDay(fecha, tomorrow)) return "Mañana";
+
+  return fecha.toLocaleDateString("es-AR", { weekday: "short" });
+}
+
+function formatTurnoDate(fecha: Date) {
+  return fecha.toLocaleDateString("es-AR", {
+    day: "numeric",
+    month: "long",
+  });
+}
+
+function isSameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
   );
 }
