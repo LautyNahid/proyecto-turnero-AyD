@@ -92,6 +92,11 @@ function parseHora(value: unknown): string {
   return hora;
 }
 
+function calcularFechaHoraTurno(fecha: Date, hora: string): Date {
+  const fechaStr = fecha.toISOString().slice(0, 10);
+  return fromZonedTime(`${fechaStr}T${hora}:00`, TIMEZONE);
+}
+
 function calcularPrecioTurno(precioBaseCancha: number, hora: string): number {
   const esPico = hora >= HORA_INICIO_RECARGO;
   return esPico ? Math.round(precioBaseCancha * RECARGO_HORARIO_PICO * 100) / 100 : precioBaseCancha;
@@ -220,24 +225,43 @@ export class ReservaService {
     await this.ensureTurnoSinReserva(id_turno);
   }
 
-  async eliminarReserva(idParam: string) {
-    const id_reserva = parseReservaId(idParam);
-    const reserva = await this.repository.findById(id_reserva);
+  async eliminarReserva(idParam: string, userId: string, esAdmin: boolean) {
+  const id_reserva = parseReservaId(idParam);
+  const reserva = await this.repository.findById(id_reserva);
 
-    if (!reserva) {
-      throw new ServiceError("Reserva no encontrada", 404);
-    }
-
-    try {
-      await this.repository.delete(id_reserva);
-    } catch (error) {
-      if (isKnownPrismaError(error, "P2003")) {
-        throw new ServiceError("No se puede eliminar una reserva con registros asociados", 409);
-      }
-
-      throw error;
-    }
+  if (!reserva) {
+    throw new ServiceError("Reserva no encontrada", 404);
   }
+
+  if (!esAdmin && reserva.id_jugador !== userId) {
+    throw new ServiceError("No tenes permiso para cancelar esta reserva", 403);
+  }
+
+  if (!esAdmin) {
+    await this.aplicarPenalizacionSiCorresponde(reserva);
+  }
+
+  try {
+    await this.repository.delete(id_reserva);
+  } catch (error) {
+    if (isKnownPrismaError(error, "P2003")) {
+      throw new ServiceError("No se puede eliminar una reserva con registros asociados", 409);
+    }
+    throw error;
+  }
+}
+
+private async aplicarPenalizacionSiCorresponde(reserva: { lobby: { estado_lobby: string } | null; turno: { fecha: Date; hora: string }; id_jugador: string }) {
+  const lobby = reserva.lobby;
+  if (!lobby || lobby.estado_lobby !== "Confirmado") return;
+
+  const fechaHoraTurno = calcularFechaHoraTurno(reserva.turno.fecha, reserva.turno.hora);
+  const horasFaltantes = (fechaHoraTurno.getTime() - Date.now()) / (1000 * 60 * 60);
+
+  if (horasFaltantes < 12) {
+    await this.jugadorRepo.incrementPenalizaciones(reserva.id_jugador);
+  }
+}
 
   private async ensureJugadorExists(id_jugador: string) {
     const jugador = await this.jugadorRepo.findById(id_jugador);

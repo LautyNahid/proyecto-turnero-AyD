@@ -44,6 +44,7 @@ function toLobbyPartido(lobby: LobbyConRelaciones): PartidoLobby {
     id: lobby.id_lobby,
     tipo: "lobby",
     fecha: new Date(lobby.turno.fecha).toLocaleDateString("es-AR", {
+      timeZone: "UTC",
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -63,6 +64,7 @@ function toReservaPartido(reserva: ReservaWithRelations): PartidoReserva {
     id: reserva.id_reserva,
     tipo: "reserva",
     fecha: new Date(reserva.turno.fecha).toLocaleDateString("es-AR", {
+      timeZone: "UTC",
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -85,6 +87,8 @@ export default function MisPartidosPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [cancelando, setCancelando] = useState(false);
+
 
   const {
     lobby: lobbyDetalle,
@@ -140,6 +144,25 @@ export default function MisPartidosPage() {
     if (isMobile) setSheetOpen(true);
   }
 
+  async function handleCancelarReserva(id_reserva: number) {
+  setCancelando(true);
+  try {
+    const res = await fetch(`/api/reserva/${id_reserva}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error ?? "No se pudo cancelar la reserva");
+    }
+
+    setPartidos((current) => current.filter((p) => !(p.tipo === "reserva" && p.id === id_reserva)));
+    setSelectedId(null);
+    setSelectedTipo(null);
+  } catch (err) {
+    setFetchError(err instanceof Error ? err.message : "Error al cancelar la reserva");
+  } finally {
+    setCancelando(false);
+  }
+}
+
   const selectedPartido = partidos.find((p) => p.id === selectedId) ?? null;
 
   const detailPanel = (() => {
@@ -162,7 +185,11 @@ export default function MisPartidosPage() {
     }
 
     if (selectedPartido.tipo === "reserva") {
-      return <ReservaDetail reserva={selectedPartido} />;
+      return <ReservaDetail
+              reserva={selectedPartido}
+              onCancelar={() => handleCancelarReserva(selectedPartido.id)}
+              cancelando={cancelando}
+            />
     }
 
     if (lobbyError) {

@@ -12,6 +12,7 @@ export interface JugadorRepository {
   findById(id_usuario: string): Promise<Jugador | null>;
   findByIdConUsuario(id_usuario: string): Promise<JugadorConUsuario | null>;
   update(id_usuario: string, data: UpdateJugadorData): Promise<Jugador>;
+  incrementPenalizaciones(id_usuario: string): Promise<Jugador>;
 }
 
 export class PrismaJugadorRepository implements JugadorRepository {
@@ -34,6 +35,13 @@ export class PrismaJugadorRepository implements JugadorRepository {
       data,
     });
   }
+
+  incrementPenalizaciones(id_usuario: string) {
+  return db.jugador.update({
+    where: { id_usuario },
+    data: { penalizaciones: { increment: 1 } },
+  });
+ }
 }
 
 export const jugadorRepository = new PrismaJugadorRepository();

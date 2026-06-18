@@ -13,6 +13,7 @@ type EstadoTurno = "Disponible" | "Reservado" | "EnCurso" | "Finalizado";
 
 function formatFecha(fecha: Date): string {
   return new Date(fecha).toLocaleDateString("es-AR", {
+    timeZone: "UTC",
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -92,11 +93,12 @@ interface PartidosAdminTableProps {
   reservas: ReservaWithRelations[];
   filtro: "todos" | "lobby" | "turno";
   query: string;
+  onCancelarReserva: (reserva: ReservaWithRelations) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function PartidosAdminTable({ lobbies, reservas, filtro, query }: PartidosAdminTableProps) {
+export function PartidosAdminTable({ lobbies, reservas, filtro, query, onCancelarReserva }: PartidosAdminTableProps) {
   const q = query.toLowerCase().trim();
 
   const filasLobby = lobbies
@@ -139,6 +141,7 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query }: Partido
           <thead className="text-xs text-muted-foreground bg-muted/40">
             <tr>
               <th className="text-left p-3 pl-5">ID</th>
+              <th className="text-left p-3">ID Turno</th>
               <th className="text-left p-3">Tipo</th>
               <th className="text-left p-3">Fecha · Hora</th>
               <th className="text-left p-3">Cancha</th>
@@ -157,6 +160,7 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query }: Partido
               return (
                 <tr key={`lobby-${lobby.id_lobby}`} className="border-t border-border hover:bg-muted/30">
                   <td className="p-3 pl-5 font-mono text-xs text-muted-foreground">L-{lobby.id_lobby}</td>
+                  <td className="p-3 font-mono text-xs text-muted-foreground">T-{lobby.turno.id_turno}</td>
                   <td className="p-3"><TypeBadge tipo="lobby" /></td>
                   <td className="p-3">
                     <div className="font-semibold">{formatFecha(lobby.turno.fecha)}</div>
@@ -188,7 +192,8 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query }: Partido
 
             {filasReserva.map((reserva) => (
               <tr key={`reserva-${reserva.id_reserva}`} className="border-t border-border hover:bg-muted/30">
-                <td className="p-3 pl-5 font-mono text-xs text-muted-foreground">T-{reserva.id_reserva}</td>
+                <td className="p-3 pl-5 font-mono text-xs text-muted-foreground">R-{reserva.id_reserva}</td>
+                <td className="p-3 font-mono text-xs text-muted-foreground">T-{reserva.turno.id_turno}</td>
                 <td className="p-3"><TypeBadge tipo="turno" /></td>
                 <td className="p-3">
                   <div className="font-semibold">{formatFecha(reserva.turno.fecha)}</div>
@@ -210,8 +215,11 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query }: Partido
                   ${Number(reserva.turno.precio).toLocaleString("es-AR")}
                 </td>
                 <td className="p-3 pr-5 text-right">
-                  <button className="size-8 rounded-lg hover:bg-muted inline-flex items-center justify-center text-muted-foreground">
-                    <MoreHorizontal className="size-4" />
+                  <button
+                    onClick={() => onCancelarReserva(reserva)}
+                    className="text-xs font-semibold text-destructive hover:underline px-2 py-1 rounded-lg hover:bg-destructive/10"
+                  >
+                    Cancelar
                   </button>
                 </td>
               </tr>

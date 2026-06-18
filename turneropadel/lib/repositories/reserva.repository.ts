@@ -14,6 +14,7 @@ export type ReservaWithRelations = Prisma.ReservaGetPayload<{
         cancha: true;
       };
     };
+    lobby: true;
   };
 }>;
 
@@ -42,6 +43,7 @@ const reservaInclude = {
       cancha: true,
     },
   },
+  lobby: true,
 } satisfies Prisma.ReservaInclude;
 
 export interface ReservaRepository {

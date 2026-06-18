@@ -16,6 +16,16 @@ import {
 import { Search, CalendarRange, Clock, Users2, CheckCircle2 } from "lucide-react";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
 import type { ReservaWithRelations } from "@/lib/repositories/reserva.repository";
+import { Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 type Filtro = "todos" | "lobby" | "turno";
 
@@ -28,6 +38,8 @@ export default function AdminPartidosPage() {
   const [query, setQuery] = useState("");
   const [cancelTarget, setCancelTarget] = useState<LobbyConRelaciones | null>(null);
   const [cancelando, setCancelando] = useState(false);
+  const [cancelReservaTarget, setCancelReservaTarget] = useState<ReservaWithRelations | null>(null);
+  const [cancelandoReserva, setCancelandoReserva] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -75,6 +87,25 @@ export default function AdminPartidosPage() {
       setCancelTarget(null);
     }
   }
+
+  async function handleCancelarReserva() {
+  if (!cancelReservaTarget) return;
+  setCancelandoReserva(true);
+  try {
+    const res = await fetch(`/api/reserva/${cancelReservaTarget.id_reserva}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json();
+      setError(data.error ?? "Error al cancelar la reserva");
+      return;
+    }
+    await fetchData();
+  } catch {
+    setError("Error de red");
+  } finally {
+    setCancelandoReserva(false);
+    setCancelReservaTarget(null);
+  }
+}
 
   const stats = useMemo(() => {
     const confirmados =
@@ -150,6 +181,7 @@ export default function AdminPartidosPage() {
           reservas={reservas}
           filtro={filtro}
           query={query}
+          onCancelarReserva={setCancelReservaTarget}
         />
       )}
 
@@ -159,6 +191,26 @@ export default function AdminPartidosPage() {
         onConfirmar={handleCancelar}
         onCerrar={() => setCancelTarget(null)}
       />
+      <Dialog open={cancelReservaTarget !== null} onOpenChange={(open) => !open && setCancelReservaTarget(null)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Cancelar reserva</DialogTitle>
+          <DialogDescription>
+            {cancelReservaTarget &&
+              `¿Cancelar la reserva #${cancelReservaTarget.id_reserva} de ${cancelReservaTarget.jugador.usuario.nombre} ${cancelReservaTarget.jugador.usuario.apellido}? El turno volverá a estar disponible.`}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setCancelReservaTarget(null)} disabled={cancelandoReserva}>
+            Volver
+          </Button>
+          <Button variant="destructive" onClick={() => void handleCancelarReserva()} disabled={cancelandoReserva}>
+            {cancelandoReserva && <Loader2 className="size-4 animate-spin mr-1" />}
+            Confirmar cancelación
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </AppShell>
   );
 }

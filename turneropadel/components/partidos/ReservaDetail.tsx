@@ -1,14 +1,32 @@
 "use client";
 
-import { MapPin, Clock, Users } from "lucide-react";
+import { useState } from "react";
+import { MapPin, Clock, Users, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { PartidoReserva } from "@/lib/types";
 
 interface ReservaDetailProps {
   reserva: PartidoReserva;
+  onCancelar: () => Promise<void>;
+  cancelando: boolean;
 }
 
-export function ReservaDetail({ reserva }: ReservaDetailProps) {
+export function ReservaDetail({ reserva, onCancelar, cancelando }: ReservaDetailProps) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  async function handleConfirm() {
+    await onCancelar();
+    setConfirmOpen(false);
+  }
+
   return (
     <div className="space-y-6">
       <div
@@ -38,10 +56,31 @@ export function ReservaDetail({ reserva }: ReservaDetailProps) {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <Button variant="outline" className="rounded-full px-5">
+        <Button variant="outline" className="rounded-full px-5" onClick={() => setConfirmOpen(true)}>
           Cancelar reserva
         </Button>
       </div>
+
+      <Dialog open={confirmOpen} onOpenChange={(open) => !cancelando && setConfirmOpen(open)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar reserva</DialogTitle>
+            <DialogDescription>
+              ¿Seguro que querés cancelar tu reserva del {reserva.fecha} a las {reserva.hora}?
+              Si el lobby ya está confirmado y faltan menos de 12 horas, podrías recibir una penalización.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={cancelando}>
+              Volver
+            </Button>
+            <Button variant="destructive" onClick={() => void handleConfirm()} disabled={cancelando}>
+              {cancelando && <Loader2 className="size-4 animate-spin mr-1" />}
+              Confirmar cancelación
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
