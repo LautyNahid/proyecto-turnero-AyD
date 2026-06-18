@@ -95,6 +95,7 @@ export default function MisPartidosPage() {
     aceptarSolicitud,
     rechazarSolicitud,
     expulsarJugador,
+    cancelarLobby,
   } = useLobby(selectedId ?? 0);
 
   useEffect(() => {
@@ -142,6 +143,14 @@ export default function MisPartidosPage() {
     if (isMobile) setSheetOpen(true);
   }
 
+  async function handleCancelarReserva() {
+    if (!selectedId) return;
+    await fetch(`/api/reserva/${selectedId}`, { method: "DELETE" });
+    setPartidos((prev) => prev.filter((p) => p.id !== selectedId));
+    setSelectedId(null);
+    setSelectedTipo(null);
+  }
+
   const selectedPartido = partidos.find((p) => p.id === selectedId) ?? null;
 
   useEffect(() => {
@@ -176,7 +185,7 @@ export default function MisPartidosPage() {
     }
 
     if (selectedPartido.tipo === "reserva") {
-      return <ReservaDetail reserva={selectedPartido} />;
+      return <ReservaDetail reserva={selectedPartido} onCancelarReserva={handleCancelarReserva} />;
     }
 
     if (lobbyError) {
@@ -195,6 +204,7 @@ export default function MisPartidosPage() {
         onAceptarSolicitud={aceptarSolicitud}
         onRechazarSolicitud={rechazarSolicitud}
         onExpulsarJugador={expulsarJugador}
+        onCancelarLobby={cancelarLobby}
       />
     );
   })();

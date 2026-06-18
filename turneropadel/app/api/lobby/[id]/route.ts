@@ -4,7 +4,7 @@ import { fail } from "@/lib/types";
 import * as lobbyService from "@/lib/services/lobby.service";
 import type { EstadoLobby } from "@prisma/client";
 
-const ESTADOS_VALIDOS: EstadoLobby[] = ["Abierto", "Confirmado", "Finalizado", "Cancelado"];
+const ESTADOS_VALIDOS: EstadoLobby[] = ["Finalizado", "Cancelado"];
 
 type RouteContext = { params: Promise<{ id: string }> };
 

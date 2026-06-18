@@ -27,6 +27,7 @@ interface LobbyDetailProps {
   onAceptarSolicitud: (id_solicitud: number) => Promise<void>;
   onRechazarSolicitud: (id_solicitud: number) => Promise<void>;
   onExpulsarJugador: (id_jugador: string) => Promise<void>;
+  onCancelarLobby: () => Promise<void>;
 }
 
 
@@ -64,6 +65,7 @@ export function LobbyDetail({
   onAceptarSolicitud,
   onRechazarSolicitud,
   onExpulsarJugador,
+  onCancelarLobby,
 }: LobbyDetailProps) {
   const { user } = useUser();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -215,7 +217,10 @@ export function LobbyDetail({
             <Button variant="outline" onClick={() => setConfirmOpen(false)}>
               Volver
             </Button>
-            <Button variant="destructive" onClick={() => setConfirmOpen(false)}>
+            <Button variant="destructive" onClick={async () => {
+              await onCancelarLobby();
+              setConfirmOpen(false);
+            }}>
               Cancelar lobby
             </Button>
           </DialogFooter>

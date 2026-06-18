@@ -1,17 +1,33 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Clock, Users, MessageSquare } from "lucide-react";
+import { MapPin, Clock, Users, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { LobbyChat } from "./LobbyChat";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { PartidoReserva } from "@/lib/types";
 
 interface ReservaDetailProps {
   reserva: PartidoReserva;
+  onCancelarReserva: () => Promise<void>;
 }
 
-export function ReservaDetail({ reserva }: ReservaDetailProps) {
-  const [chatOpen, setChatOpen] = useState(false);
+export function ReservaDetail({ reserva, onCancelarReserva }: ReservaDetailProps) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
+
+  async function handleCancelar() {
+    setCancelando(true);
+    await onCancelarReserva();
+    setCancelando(false);
+    setConfirmOpen(false);
+  }
 
   return (
     <div className="space-y-6">
@@ -43,12 +59,33 @@ export function ReservaDetail({ reserva }: ReservaDetailProps) {
             </div>
           </div>
           <button
+            onClick={() => setConfirmOpen(true)}
             className="text-xs bg-red-500 hover:bg-red-600 active:bg-red-700 px-3 py-1.5 rounded-full flex items-center gap-1.5 text-white font-semibold transition shrink-0 shadow-[0_0_12px_rgba(239,68,68,0.5)] hover:shadow-[0_0_16px_rgba(239,68,68,0.7)]"
           >
             Cancelar reserva
           </button>
         </div>
       </div>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar reserva</DialogTitle>
+            <DialogDescription>
+              Esta acción cancela tu reserva del {reserva.fecha} a las {reserva.hora} en {reserva.cancha}. No se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={cancelando}>
+              Volver
+            </Button>
+            <Button variant="destructive" onClick={handleCancelar} disabled={cancelando}>
+              {cancelando && <Loader2 className="size-4 animate-spin" />}
+              Cancelar reserva
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
