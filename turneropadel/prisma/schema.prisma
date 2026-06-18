@@ -48,6 +48,8 @@ enum TipoNotificacion {
   SolicitudAceptada
   JugadorExpulsado
   CancelacionLobby
+  ReservaConfirmada
+  ReservaCancelada
 }
 
 // ─── IDENTITY ────────────────────────────────────────────────────────────────
