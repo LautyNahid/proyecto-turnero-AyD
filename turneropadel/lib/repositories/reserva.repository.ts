@@ -43,14 +43,38 @@ const reservaInclude = {
   },
 } satisfies Prisma.ReservaInclude;
 
+const lobbyInclude = {
+  turno: {
+    include: {
+      cancha: true,
+    },
+  },
+  jugadores: {
+    include: {
+      jugador: {
+        include: {
+          usuario: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.LobbyInclude;
+
+export type LobbyConJugadores = Prisma.LobbyGetPayload<{
+  include: typeof lobbyInclude;
+}>;
+
 export interface ReservaRepository {
   findAll(): Promise<ReservaWithRelations[]>;
   findById(id_reserva: number): Promise<ReservaWithRelations | null>;
   findByTurnoId(id_turno: number): Promise<Reserva | null>;
   findByJugadorId(id_jugador: string): Promise<ReservaWithRelations[]>;
   create(data: CreateReservaData): Promise<ReservaWithRelations>;
-  createWithTurno(data: CreateReservaWithTurnoData): Promise<ReservaWithRelations>;
+  createWithTurno(
+    data: CreateReservaWithTurnoData,
+  ): Promise<ReservaWithRelations>;
   delete(id_reserva: number): Promise<ReservaWithRelations>;
+  findLobbyByReservaId(id_reserva: number): Promise<LobbyConJugadores | null>;
 }
 
 export class PrismaReservaRepository implements ReservaRepository {
@@ -135,10 +159,19 @@ export class PrismaReservaRepository implements ReservaRepository {
       return reserva;
     });
   }
+
+  findLobbyByReservaId(id_reserva: number) {
+    return db.lobby.findUnique({
+      where: { id_reserva },
+      include: lobbyInclude,
+    });
+  }
 }
 
 export function isKnownPrismaError(error: unknown, code: string) {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === code;
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError && error.code === code
+  );
 }
 
 export const reservaRepository = new PrismaReservaRepository();

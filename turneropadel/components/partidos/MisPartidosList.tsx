@@ -6,10 +6,11 @@ import type { Partido } from "@/lib/types";
 interface MisPartidosListProps {
   partidos: Partido[];
   selectedId: number | null;
-  onSelect: (id: number) => void;
+  selectedTipo: Partido["tipo"] | null;
+  onSelect: (id: number, tipo: Partido["tipo"]) => void;
 }
 
-export function MisPartidosList({ partidos, selectedId, onSelect }: MisPartidosListProps) {
+export function MisPartidosList({ partidos, selectedId, selectedTipo, onSelect }: MisPartidosListProps) {
   const proximos = partidos.filter((p) => {
     if (p.tipo === "lobby") return p.estado === "Abierto" || p.estado === "Confirmado";
     return true;
@@ -39,8 +40,8 @@ export function MisPartidosList({ partidos, selectedId, onSelect }: MisPartidosL
             <PartidoListItem
               key={partido.id}
               partido={partido}
-              selected={selectedId === partido.id}
-              onClick={() => onSelect(partido.id)}
+              selected={selectedId === partido.id && selectedTipo === partido.tipo}
+              onClick={() => onSelect(partido.id, partido.tipo)}
             />
           ))}
         </div>

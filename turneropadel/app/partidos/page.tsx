@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { MisPartidosList } from "@/components/partidos/MisPartidosList";
 import { LobbyDetail } from "@/components/partidos/LobbyDetail";
@@ -83,6 +84,9 @@ function toReservaPartido(reserva: ReservaWithRelations): PartidoReserva {
 
 export default function MisPartidosPage() {
   const isMobile = useIsMobile();
+  const searchParams = useSearchParams();
+  const requestedIdParam = searchParams.get("id");
+  const requestedTipoParam = searchParams.get("tipo");
   const [partidos, setPartidos] = useState<Partido[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedTipo, setSelectedTipo] = useState<"lobby" | "reserva" | null>(null);
@@ -119,10 +123,20 @@ export default function MisPartidosPage() {
 
         const todos: Partido[] = [...lobbies, ...reservas];
 
+        const requestedId = Number(requestedIdParam);
+        const requestedTipo = requestedTipoParam;
+        const requestedPartido = todos.find(
+          (partido) =>
+            partido.id === requestedId &&
+            (requestedTipo === "lobby" || requestedTipo === "reserva") &&
+            partido.tipo === requestedTipo,
+        );
+        const initialPartido = requestedPartido ?? todos[0];
+
         setPartidos(todos);
-        if (todos.length > 0) {
-          setSelectedId(todos[0].id);
-          setSelectedTipo(todos[0].tipo);
+        if (initialPartido) {
+          setSelectedId(initialPartido.id);
+          setSelectedTipo(initialPartido.tipo);
         }
       } catch {
         setFetchError("Error de red");
@@ -132,14 +146,14 @@ export default function MisPartidosPage() {
     }
 
     fetchPartidos();
-  }, []);
+  }, [requestedIdParam, requestedTipoParam]);
 
   useEffect(() => {
     if (selectedId && selectedTipo === "lobby") cargarLobby(selectedId);
   }, [selectedId, selectedTipo, cargarLobby]);
 
-  function handleSelect(id: number) {
-    const partido = partidos.find((p) => p.id === id);
+  function handleSelect(id: number, tipo: Partido["tipo"]) {
+    const partido = partidos.find((p) => p.id === id && p.tipo === tipo);
     if (!partido) return;
     setSelectedId(id);
     setSelectedTipo(partido.tipo);
@@ -154,7 +168,7 @@ export default function MisPartidosPage() {
     setSelectedTipo(null);
   }
 
-  const selectedPartido = partidos.find((p) => p.id === selectedId) ?? null;
+  const selectedPartido = partidos.find((p) => p.id === selectedId && p.tipo === selectedTipo) ?? null;
 
   useEffect(() => {
     if (selectedTipo !== "lobby" || !lobbyDetalle) return;
@@ -221,6 +235,7 @@ export default function MisPartidosPage() {
             <MisPartidosList
               partidos={partidos}
               selectedId={selectedId}
+              selectedTipo={selectedTipo}
               onSelect={handleSelect}
             />
           </div>

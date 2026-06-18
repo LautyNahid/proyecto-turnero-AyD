@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { AppShell } from "@/components/layout/AppShell";
 import { Trophy, Star, Edit3, CalendarRange, Loader2 } from "lucide-react";
@@ -31,6 +32,7 @@ interface Partido {
 }
 
 export default function Perfil() {
+  const router = useRouter();
   const { user, isLoaded } = useUser();
   const idUsuario = isLoaded ? user?.id ?? null : null;
 
@@ -94,8 +96,19 @@ export default function Perfil() {
     });
   }
 
-  const nombreCompleto = perfil ? `${perfil.nombre} ${perfil.apellido}` : "";
-  const iniciales = perfil ? `${perfil.nombre[0] ?? ""}${perfil.apellido[0] ?? ""}`.toUpperCase() : "";
+  function abrirPartido(reserva: (typeof agenda)[number]) {
+    router.push(`/partidos?tipo=reserva&id=${reserva.id_reserva}`);
+  }
+
+  const nombreClerk =
+    user?.fullName ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+    user?.primaryEmailAddress?.emailAddress ||
+    "";
+  const nombreDb = perfil ? `${perfil.nombre} ${perfil.apellido}`.trim() : "";
+  const nombreCompleto = nombreDb || nombreClerk || "Usuario";
+  const iniciales = getInitials(nombreCompleto);
+  const fotoPerfil = user?.imageUrl;
 
   return (
     <AppShell title="Mi perfil" subtitle="Tus datos y tu historial deportivo">
@@ -113,9 +126,17 @@ export default function Perfil() {
                 <p className="mt-6 text-sm text-destructive">{perfilError}</p>
               ) : perfil ? (
                 <>
-                  <div className="size-24 rounded-full bg-lime text-lime-foreground text-3xl font-bold flex items-center justify-center mx-auto ring-4 ring-card mt-6">
-                    {iniciales}
-                  </div>
+                  {fotoPerfil ? (
+                    <div
+                      className="size-24 rounded-full bg-cover bg-center mx-auto ring-4 ring-card mt-6"
+                      style={{ backgroundImage: `url(${fotoPerfil})` }}
+                      aria-label={`Foto de perfil de ${nombreCompleto}`}
+                    />
+                  ) : (
+                    <div className="size-24 rounded-full bg-lime text-lime-foreground text-3xl font-bold flex items-center justify-center mx-auto ring-4 ring-card mt-6">
+                      {iniciales}
+                    </div>
+                  )}
                   <div className="mt-3 font-bold text-lg">{nombreCompleto}</div>
                   <div className="text-xs text-muted-foreground">{perfil.ciudad}</div>
                   <button
@@ -172,8 +193,8 @@ export default function Perfil() {
               {partidosFiltrados.map((reserva) => (
                 <button
                   key={reserva.id_reserva}
-                  onClick={() => (tab === "Completados" ? abrirEvaluacion(reserva) : undefined)}
-                  className={`w-full text-left bg-card rounded-2xl border border-border shadow-soft p-4 flex items-center justify-between ${tab === "Completados" ? "hover:border-primary/40 transition cursor-pointer" : "cursor-default"}`}
+                  onClick={() => (tab === "Completados" ? abrirEvaluacion(reserva) : abrirPartido(reserva))}
+                  className="w-full text-left bg-card rounded-2xl border border-border shadow-soft p-4 flex items-center justify-between hover:border-primary/40 transition cursor-pointer"
                 >
                   <div>
                     <div className="font-semibold text-sm">Cancha {reserva.turno.cancha.nro_cancha}</div>
@@ -256,4 +277,19 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="font-semibold">{value}</span>
     </div>
   );
+}
+
+function getInitials(value: string) {
+  const parts = value
+    .replace(/@.*/, "")
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (parts.length === 0) return "U";
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }
