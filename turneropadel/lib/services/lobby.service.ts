@@ -248,10 +248,13 @@ export async function responderSolicitud(
       const solicitudActualizada = await repo.updateEstadoSolicitud(tx, id_solicitud, "Aceptada");
       await repo.createInscripcion(tx, id_lobby, solicitud.id_jugador);
 
-      const nuevosFaltantes = lobby.jugadores_faltantes - 1;
-      await repo.decrementarFaltantes(tx, id_lobby, nuevosFaltantes);
+      const { actualizado, faltantesRestantes } = await repo.decrementarFaltantesAtomico(tx, id_lobby);
 
-      return { solicitud: solicitudActualizada, faltantesRestantes: nuevosFaltantes, id_turno: lobby.id_turno };
+      if (!actualizado) {
+        throw new Error("El partido ya está completo");
+      }
+
+      return { solicitud: solicitudActualizada, faltantesRestantes: faltantesRestantes!, id_turno: lobby.id_turno };
     });
 
     const lobbyCompleto = resultado.faltantesRestantes === 0;

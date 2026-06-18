@@ -136,15 +136,25 @@ export async function updateEstadoLobby(
   return client.lobby.update({ where: { id_lobby }, data });
 }
 
-export async function decrementarFaltantes(
+export async function decrementarFaltantesAtomico(
   client: DbClient,
-  id_lobby: number,
-  nuevosFaltantes: number
-): Promise<Lobby> {
-  return client.lobby.update({
-    where: { id_lobby },
-    data: {jugadores_faltantes: nuevosFaltantes},
+  id_lobby: number
+): Promise<{ actualizado: boolean; faltantesRestantes: number | null }> {
+  const result = await client.lobby.updateMany({
+    where: { id_lobby, jugadores_faltantes: { gt: 0 } },
+    data: { jugadores_faltantes: { decrement: 1 } },
   });
+
+  if (result.count === 0) {
+    return { actualizado: false, faltantesRestantes: null };
+  }
+
+  const lobby = await client.lobby.findUnique({
+    where: { id_lobby },
+    select: { jugadores_faltantes: true },
+  });
+
+  return { actualizado: true, faltantesRestantes: lobby?.jugadores_faltantes ?? null };
 }
 
 export async function incrementarFaltantes(
