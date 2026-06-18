@@ -22,9 +22,7 @@ import { NotificationsDropdown } from "@/components/layout/NotificationsDropdown
 const navMain = [
   { to: "/", label: "Inicio", icon: LayoutDashboard },
   { to: "/reservar", label: "Reservar turno", icon: CalendarRange },
-  { to: "/partidos", label: "Mis Partidos", icon: Users2 },
-  { to: "/perfil", label: "Mi perfil", icon: User },
-  { to: "/notificaciones", label: "Notificaciones", icon: Bell },
+  { to: "/partidos", label: "Mis Partidos", icon: Users2 }
 ];
 
 const navAdmin = [
@@ -109,14 +107,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
           </ul>
         </nav>
 
-        <div className="p-3 border-t border-sidebar-border">
-          <Link
-            href="/login"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent"
-          >
-            <LogOut className="size-4" /> Cerrar sesión
-          </Link>
-        </div>
+       
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
