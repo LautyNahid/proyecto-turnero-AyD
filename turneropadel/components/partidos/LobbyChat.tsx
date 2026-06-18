@@ -1,14 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Send } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Send, X, Minus, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Message {
@@ -28,6 +22,7 @@ interface LobbyChatProps {
 
 export function LobbyChat({ open, onOpenChange, nombreLobby }: LobbyChatProps) {
   const { user } = useUser();
+  const [minimized, setMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -72,66 +67,93 @@ export function LobbyChat({ open, onOpenChange, nombreLobby }: LobbyChatProps) {
     }
   }
 
+  if (!open) return null;
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:w-96 flex flex-col p-0">
-        <SheetHeader className="px-5 py-4 border-b border-border shrink-0">
-          <SheetTitle className="text-base">Chat — {nombreLobby}</SheetTitle>
-          <p className="text-xs text-muted-foreground">
-            Funcionalidad demostrativa. Los mensajes no se persisten.
-          </p>
-        </SheetHeader>
-
-        {/* Mensajes */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex items-end gap-2 ${msg.own ? "flex-row-reverse" : "flex-row"}`}
-            >
-              {!msg.own && (
-                <div className="size-8 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">
-                  {msg.initials}
-                </div>
-              )}
-              <div className={`max-w-[75%] space-y-1 ${msg.own ? "items-end" : "items-start"} flex flex-col`}>
-                {!msg.own && (
-                  <span className="text-xs text-muted-foreground px-1">{msg.author}</span>
-                )}
-                <div
-                  className={`px-3 py-2 rounded-2xl text-sm ${
-                    msg.own
-                      ? "bg-primary text-primary-foreground rounded-br-sm"
-                      : "bg-muted text-foreground rounded-bl-sm"
-                  }`}
-                >
-                  {msg.text}
-                </div>
-                <span className="text-[10px] text-muted-foreground px-1">{msg.hora}</span>
-              </div>
-            </div>
-          ))}
+    <div className="fixed bottom-4 right-4 z-50 w-80 rounded-2xl shadow-2xl border border-border bg-card flex flex-col overflow-hidden">
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground cursor-pointer select-none"
+        onClick={() => setMinimized((v) => !v)}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <MessageSquare className="size-4 shrink-0" />
+          <span className="text-sm font-semibold truncate">{nombreLobby}</span>
         </div>
-
-        {/* Input */}
-        <div className="px-4 py-3 border-t border-border shrink-0 flex gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Escribí un mensaje..."
-            className="flex-1 rounded-full bg-muted px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-          />
-          <Button
-            size="icon"
-            className="rounded-full shrink-0"
-            onClick={handleSend}
-            disabled={!input.trim()}
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={(e) => { e.stopPropagation(); setMinimized((v) => !v); }}
+            className="size-6 rounded-full hover:bg-white/20 flex items-center justify-center transition"
           >
-            <Send className="size-4" />
-          </Button>
+            <Minus className="size-3.5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onOpenChange(false); }}
+            className="size-6 rounded-full hover:bg-white/20 flex items-center justify-center transition"
+          >
+            <X className="size-3.5" />
+          </button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </div>
+
+      {/* Body — oculto si minimizado */}
+      {!minimized && (
+        <>
+          <p className="text-[10px] text-muted-foreground text-center py-1.5 border-b border-border bg-muted/40">
+            Funcionalidad demostrativa · Los mensajes no se persisten
+          </p>
+
+          {/* Mensajes */}
+          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 max-h-72">
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex items-end gap-2 ${msg.own ? "flex-row-reverse" : "flex-row"}`}
+              >
+                {!msg.own && (
+                  <div className="size-7 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">
+                    {msg.initials}
+                  </div>
+                )}
+                <div className={`max-w-[75%] space-y-0.5 flex flex-col ${msg.own ? "items-end" : "items-start"}`}>
+                  {!msg.own && (
+                    <span className="text-[10px] text-muted-foreground px-1">{msg.author}</span>
+                  )}
+                  <div
+                    className={`px-3 py-1.5 rounded-2xl text-sm ${
+                      msg.own
+                        ? "bg-primary text-primary-foreground rounded-br-sm"
+                        : "bg-muted text-foreground rounded-bl-sm"
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground px-1">{msg.hora}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Input */}
+          <div className="px-3 py-2 border-t border-border flex gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Escribí un mensaje..."
+              className="flex-1 rounded-full bg-muted px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            <Button
+              size="icon"
+              className="rounded-full size-8 shrink-0"
+              onClick={handleSend}
+              disabled={!input.trim()}
+            >
+              <Send className="size-3.5" />
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
