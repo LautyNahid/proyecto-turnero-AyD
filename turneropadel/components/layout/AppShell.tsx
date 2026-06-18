@@ -17,6 +17,7 @@ import {
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { HeaderAuth } from "@/components/layout/headerAuth";
+import { NotificationsDropdown } from "@/components/layout/NotificationsDropdown";
 
 const navMain = [
   { to: "/", label: "Inicio", icon: LayoutDashboard },
@@ -131,10 +132,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
               className="bg-transparent outline-none flex-1 text-foreground placeholder:text-muted-foreground"
             />
           </div>
-          <button className="relative size-9 rounded-full bg-muted hover:bg-accent flex items-center justify-center">
-            <Bell className="size-4" />
-            <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-lime ring-2 ring-card" />
-          </button>
+          <NotificationsDropdown />
           <HeaderAuth />
         </header>
         <div className="flex-1 overflow-y-auto">
