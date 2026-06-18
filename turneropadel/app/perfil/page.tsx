@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { AppShell } from "@/components/layout/AppShell";
 import { Trophy, Star, Edit3, CalendarRange, Loader2 } from "lucide-react";
@@ -31,6 +32,7 @@ interface Partido {
 }
 
 export default function Perfil() {
+  const router = useRouter();
   const { user, isLoaded } = useUser();
   const idUsuario = isLoaded ? user?.id ?? null : null;
 
@@ -92,6 +94,10 @@ export default function Perfil() {
       date: `${reserva.turno.fecha.slice(0, 10)} - ${reserva.turno.hora}`,
       status: reserva.turno.estado_turno,
     });
+  }
+
+  function abrirPartido(reserva: (typeof agenda)[number]) {
+    router.push(`/partidos?tipo=reserva&id=${reserva.id_reserva}`);
   }
 
   const nombreCompleto = perfil ? `${perfil.nombre} ${perfil.apellido}` : "";
@@ -172,8 +178,8 @@ export default function Perfil() {
               {partidosFiltrados.map((reserva) => (
                 <button
                   key={reserva.id_reserva}
-                  onClick={() => (tab === "Completados" ? abrirEvaluacion(reserva) : undefined)}
-                  className={`w-full text-left bg-card rounded-2xl border border-border shadow-soft p-4 flex items-center justify-between ${tab === "Completados" ? "hover:border-primary/40 transition cursor-pointer" : "cursor-default"}`}
+                  onClick={() => (tab === "Completados" ? abrirEvaluacion(reserva) : abrirPartido(reserva))}
+                  className="w-full text-left bg-card rounded-2xl border border-border shadow-soft p-4 flex items-center justify-between hover:border-primary/40 transition cursor-pointer"
                 >
                   <div>
                     <div className="font-semibold text-sm">Cancha {reserva.turno.cancha.nro_cancha}</div>
