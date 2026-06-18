@@ -164,11 +164,15 @@ export async function actualizarEstadoLobby(
     assertLobbyExiste(lobby);
     assertEsOrganizador(lobby.id_creador, id_solicitante);
 
-    const updated = await db.$transaction((tx) =>
-      repo.updateEstadoLobby(tx, id_lobby, { estado_lobby })
-    );
+    const updated = await db.$transaction(async (tx) => {
+          if (estado_lobby === "Cancelado") {
+            await repo.liberarTurno(tx, lobby.id_turno);
+          }
+          return repo.updateEstadoLobby(tx, id_lobby, { estado_lobby });
+        });
 
     return ok(updated);
+    
   } catch (e) {
     return fail(e instanceof Error ? e.message : "Error al actualizar el estado del lobby");
   }

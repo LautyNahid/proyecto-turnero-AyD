@@ -297,3 +297,10 @@ export async function confirmarLobbyConReserva(
     data: { estado_lobby: "Confirmado", id_reserva },
   });
 }
+
+export async function liberarTurno(client: DbClient, id_turno: number) {
+  return client.turno.update({
+    where: { id_turno },
+    data: { estado_turno: "Disponible" },
+  });
+}
