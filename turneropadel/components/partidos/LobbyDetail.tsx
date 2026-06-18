@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { MapPin, Clock, Cloud, Share2, Check, UserMinus } from "lucide-react";
+import { MapPin, Clock, MessageSquare , Share2, Check, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LobbyChat } from "./LobbyChat";
+
 import {
   Dialog,
   DialogContent,
@@ -77,6 +79,7 @@ export function LobbyDetail({
     day: "numeric",
     month: "long",
   });
+  const [chatOpen, setChatOpen] = useState(false);
 
   async function handleAceptar(id_solicitud: number) {
     setLoadingId(id_solicitud);
@@ -114,9 +117,14 @@ export function LobbyDetail({
               </span>
             </div>
           </div>
-          <button className="text-xs bg-white/10 backdrop-blur px-3 py-1.5 rounded-full flex items-center gap-1.5 hover:bg-white/15 shrink-0">
-            <Share2 className="size-3.5" /> Compartir
-          </button>
+            {esOrganizador && lobby.estado_lobby !== "Cancelado" && (
+              <button
+                onClick={() => setConfirmOpen(true)}
+                className="text-xs bg-red-500 hover:bg-red-600 active:bg-red-700 px-3 py-1.5 rounded-full flex items-center gap-1.5 text-white font-semibold transition shrink-0 shadow-[0_0_12px_rgba(239,68,68,0.5)] hover:shadow-[0_0_16px_rgba(239,68,68,0.7)]"
+              >
+                Cancelar lobby
+              </button>
+            )}
         </div>
         {lugaresVacios > 0 && (
           <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-lime text-lime-foreground text-xs font-bold">
@@ -132,9 +140,20 @@ export function LobbyDetail({
 
       {/* Jugadores */}
       <div>
-        <h3 className="font-bold mb-3">
-          Jugadores ({jugadoresConfirmados}/{jugadoresConfirmados + lugaresVacios})
-        </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold">
+            Jugadores ({jugadoresConfirmados}/{jugadoresConfirmados + lugaresVacios})
+          </h3>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full px-4 text-xs"
+            onClick={() => setChatOpen(true)}
+          >
+            <MessageSquare className="size-3.5" />
+            Chat del partido
+          </Button>
+        </div>
         <div className="grid sm:grid-cols-2 gap-3">
           {lobby.jugadores.map((lj) => (
             <div key={lj.id_jugador} className="relative">
@@ -182,15 +201,6 @@ export function LobbyDetail({
         </div>
       )}
 
-      {/* Acciones */}
-      {esOrganizador && (
-        <div className="flex flex-wrap gap-3">
-          <Button variant="outline" className="rounded-full px-5" onClick={() => setConfirmOpen(true)}>
-            Cancelar lobby
-          </Button>
-        </div>
-      )}
-
       {/* Dialog cancelar */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
@@ -210,6 +220,12 @@ export function LobbyDetail({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <LobbyChat
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        nombreLobby={`Cancha ${lobby.turno.cancha.nro_cancha} · ${lobby.turno.hora}`}
+      />
     </div>
   );
 }
