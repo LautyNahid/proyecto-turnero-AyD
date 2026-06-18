@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 export type CreateCanchaData = {
   nro_cancha: number;
   activa?: boolean;
+  precio?: number;
 };
 
 export type UpdateCanchaData = Partial<CreateCanchaData>;
@@ -16,6 +17,7 @@ export interface CanchaRepository {
   create(data: CreateCanchaData): Promise<Cancha>;
   update(id_cancha: number, data: UpdateCanchaData): Promise<Cancha>;
   delete(id_cancha: number): Promise<Cancha>;
+  hasReservasFuturas(id_cancha: number, hoy: Date): Promise<boolean>;
 }
 
 export class PrismaCanchaRepository implements CanchaRepository {
@@ -55,10 +57,24 @@ export class PrismaCanchaRepository implements CanchaRepository {
       where: { id_cancha },
     });
   }
+
+  async hasReservasFuturas(id_cancha: number, hoy: Date): Promise<boolean> {
+  const count = await db.turno.count({
+    where: {
+      id_cancha,
+      fecha: { gte: hoy },
+      reserva: { isNot: null },
+    },
+  });
+  return count > 0;
 }
+
+}
+
 
 export function isKnownPrismaError(error: unknown, code: string) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === code;
 }
 
 export const canchaRepository = new PrismaCanchaRepository();
+
