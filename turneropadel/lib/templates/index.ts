@@ -3,3 +3,5 @@ export * from "./reservaCancelada.template";
 export * from "./jugadorExpulsado.template";
 export * from "./jugadorLobbyCancelado.template";
 export * from "./jugadorLobbyConfirmado.template";
+export * from "./turnoRecordatorio.template";
+export * from "./turnoFinalizado.template";

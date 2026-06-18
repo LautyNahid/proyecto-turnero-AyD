@@ -5,6 +5,8 @@ import {
   jugadorExpulsadoTemplate,
   jugadorLobbyCanceladoTemplate,
   jugadorLobbyConfirmadoTemplate,
+  recordatorioTurnoTemplate,
+  turnoFinalizadoTemplate,
 } from "@/lib/templates";
 import { DatosReservaMail } from "@/lib/types";
 
@@ -31,6 +33,15 @@ export const NotificacionMailService = {
 
   async notificarLobbyConfirmado(email: string, datos: DatosReservaMail) {
     const mail = jugadorLobbyConfirmadoTemplate(datos);
+    await this.enviar(email, mail);
+  },
+  async notificarRecordatorioTurno(email: string, datos: DatosReservaMail) {
+    const mail = recordatorioTurnoTemplate(datos);
+    await this.enviar(email, mail);
+  },
+
+  async notificarTurnoFinalizado(email: string, datos: DatosReservaMail) {
+    const mail = turnoFinalizadoTemplate(datos);
     await this.enviar(email, mail);
   },
 

@@ -8,9 +8,11 @@ type EventosApp = {
   "solicitud.rechazada": { id_lobby: number; id_jugador: string };
   "reserva.confirmada": { id_reserva: number };
   "reserva.cancelada": { id_reserva: number };
-
+  // Faltan:
+  "turno.recordatorio": { id_reserva: number };
+  "turno.finalizado": { id_reserva: number };
   "jugador.expulsado": { id_reserva: number; id_jugador: string };
-  "lobby.cancelado": { id_reserva: number };
+  "lobby.cancelado": { id_lobby: number };
 };
 
 type NombreEvento = keyof EventosApp;
