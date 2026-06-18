@@ -33,6 +33,7 @@ export interface TurnoRepository {
   update(id_turno: number, data: UpdateTurnoData): Promise<Turno>;
   delete(id_turno: number): Promise<Turno>;
   updatePrecioDisponibles(id_cancha: number, precio: number, hoy: Date): Promise<number>;
+  findReservaByTurno(id_turno: number): Promise<{ id_reserva: number } | null>;
 }
 
 export class PrismaTurnoRepository implements TurnoRepository {
@@ -107,6 +108,13 @@ export class PrismaTurnoRepository implements TurnoRepository {
       where: { id_turno },
     });
   }
+
+  findReservaByTurno(id_turno: number) {
+  return db.reserva.findUnique({
+    where: { id_turno },
+    select: { id_reserva: true },
+  });
+}
 }
 
 export function isKnownPrismaError(error: unknown, code: string) {
