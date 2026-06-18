@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import type { Map as LeafletMap } from "leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -25,6 +26,7 @@ type Props = {
 export function MapaComplejo({ idCancha }: Props) {
   const [ubicacion, setUbicacion] = useState<Ubicacion | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
 
   useEffect(() => {
     let cancelado = false;
@@ -47,6 +49,27 @@ export function MapaComplejo({ idCancha }: Props) {
     };
   }, [idCancha]);
 
+  // Recalcula el tamaño del mapa cuando cambia el viewport (resize, rotacion de mobile, etc.)
+  useEffect(() => {
+    function handleResize() {
+      mapRef.current?.invalidateSize();
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Recalcula una vez apenas el mapa termina de montarse, por si midio mal en el primer render
+  useEffect(() => {
+    if (!ubicacion) return;
+
+    const timeout = setTimeout(() => {
+      mapRef.current?.invalidateSize();
+    }, 100);
+
+    return () => clearTimeout(timeout);
+  }, [ubicacion]);
+
   if (error) {
     return <p className="text-sm text-muted-foreground">{error}</p>;
   }
@@ -58,14 +81,22 @@ export function MapaComplejo({ idCancha }: Props) {
   const posicion: [number, number] = [ubicacion.latitud, ubicacion.longitud];
 
   return (
-    <MapContainer center={posicion} zoom={15} scrollWheelZoom={false} className="h-64 w-full rounded-xl">
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <Marker position={posicion} icon={icon}>
-        <Popup>Club Norte</Popup>
-      </Marker>
-    </MapContainer>
+    <div className="w-full overflow-hidden rounded-xl">
+      <MapContainer
+        center={posicion}
+        zoom={15}
+        scrollWheelZoom={false}
+        ref={mapRef}
+        className="h-48 sm:h-64 w-full"
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <Marker position={posicion} icon={icon}>
+          <Popup>Club Norte</Popup>
+        </Marker>
+      </MapContainer>
+    </div>
   );
 }
