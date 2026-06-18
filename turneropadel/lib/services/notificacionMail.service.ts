@@ -7,6 +7,8 @@ import {
   jugadorLobbyConfirmadoTemplate,
   recordatorioTurnoTemplate,
   turnoFinalizadoTemplate,
+  solicitudAceptadaTemplate,
+  solicitudRechazadaTemplate,
 } from "@/lib/templates";
 import { DatosReservaMail } from "@/lib/types";
 
@@ -42,6 +44,16 @@ export const NotificacionMailService = {
 
   async notificarTurnoFinalizado(email: string, datos: DatosReservaMail) {
     const mail = turnoFinalizadoTemplate(datos);
+    await this.enviar(email, mail);
+  },
+
+  async notificarSolicitudAceptada(email: string, datos: DatosReservaMail) {
+    const mail = solicitudAceptadaTemplate(datos);
+    await this.enviar(email, mail);
+  },
+
+    async notificarSolicitudRechazada(email: string, datos: DatosReservaMail) {
+    const mail = solicitudRechazadaTemplate(datos);
     await this.enviar(email, mail);
   },
 
