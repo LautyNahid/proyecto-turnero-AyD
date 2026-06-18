@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { CanchasCrudProvider, CanchasCrudSection, CanchasKpi } from "@/components/admin/CanchasCrud";
 import { AppShell } from "@/components/layout/AppShell";
-import { DollarSign, Calendar } from "lucide-react";
+import { Calendar } from "lucide-react";
+import { BloqueoSection } from "@/components/admin/BloqueoSection";
 
 const todayBookings = [
   { time: "08:00", court: "C1", player: "Lucas G.", paid: true },
@@ -12,12 +13,6 @@ const todayBookings = [
   { time: "18:30", court: "C1", player: "Diego A.", paid: true },
   { time: "20:00", court: "C3", player: "Martin R.", paid: false },
   { time: "21:30", court: "C4", player: "Lautaro V.", paid: true },
-];
-
-const pricing = [
-  { range: "08:00 - 12:00", weekday: "$2.200", weekend: "$2.600" },
-  { range: "12:00 - 17:00", weekday: "$2.400", weekend: "$2.800" },
-  { range: "17:00 - 23:00", weekday: "$2.800", weekend: "$3.200" },
 ];
 
 export default function Admin() {
@@ -35,27 +30,7 @@ export default function Admin() {
           <div className="space-y-6">
             <CanchasCrudSection />
 
-            <section className="bg-card rounded-2xl border border-border shadow-soft p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-bold flex items-center gap-2"><DollarSign className="size-4" /> Precios por horario</h3>
-                  <p className="text-xs text-muted-foreground">Configura tarifas por franja</p>
-                </div>
-                <button className="text-xs text-primary font-semibold hover:underline">Editar todo</button>
-              </div>
-              <div className="grid grid-cols-3 gap-3 text-sm">
-                <div className="text-xs text-muted-foreground font-semibold">Franja</div>
-                <div className="text-xs text-muted-foreground font-semibold">Lun-Vie</div>
-                <div className="text-xs text-muted-foreground font-semibold">Sab-Dom</div>
-                {pricing.map((p) => (
-                  <div key={p.range} className="contents">
-                    <div className="font-semibold">{p.range}</div>
-                    <div className="rounded-lg bg-muted px-3 py-2">{p.weekday}</div>
-                    <div className="rounded-lg bg-lime/30 px-3 py-2 font-semibold">{p.weekend}</div>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <BloqueoSection />
 
             <Link href="/admin/reportes" className="text-sm font-semibold text-primary hover:underline">
               Ver reportes detallados

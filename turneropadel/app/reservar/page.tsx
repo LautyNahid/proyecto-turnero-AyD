@@ -20,6 +20,7 @@ type Cancha = {
   id_cancha: number;
   nro_cancha: number;
   activa: boolean;
+  precio: number | null;
 };
 
 type Turno = {
@@ -29,6 +30,7 @@ type Turno = {
   hora: string;
   precio: string | number;
   estado_turno: "Disponible" | "Reservado" | "EnCurso" | "Finalizado";
+  bloqueos: { id_bloqueo: number; motivo: string }[];
 };
 
 type SelectedTurno = {
@@ -40,10 +42,12 @@ type SelectedTurno = {
 };
 
 const DEFAULT_HOURS = ["08:00", "09:30", "11:00", "12:30", "14:00", "15:30", "17:00", "18:30", "20:00", "21:30"];
-const DEFAULT_PRICE = 12000;
 const OCCUPIED_STATES = ["Reservado", "EnCurso", "Finalizado"];
 
 const dayNames = ["DOM", "LUN", "MAR", "MIE", "JUE", "VIE", "SAB"];
+
+const HORA_INICIO_RECARGO = "18:00";
+const RECARGO_HORARIO_PICO = 1.10;
 
 const MapaComplejo = dynamic(
   () => import("@/components/mapa/MapaComplejo").then((mod) => mod.MapaComplejo),
@@ -88,6 +92,12 @@ function addHour(h: string) {
   const [hh, mm] = h.split(":").map(Number);
   const total = hh * 60 + mm + 90;
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+function calcularPrecioEstimado(precioBaseCancha: number | null, hora: string) {
+  if (precioBaseCancha === null) return null;
+  const esPico = hora >= HORA_INICIO_RECARGO;
+  return esPico ? Math.round(precioBaseCancha * RECARGO_HORARIO_PICO * 100) / 100 : precioBaseCancha;
 }
 
 function formatPrice(value: string | number) {
@@ -180,12 +190,16 @@ export default function Reservar() {
 
   function handleSelectSlot(cancha: Cancha, turno: Turno | undefined, hora: string) {
     setConfirmed(false);
+    const precioEstimado = turno
+      ? Number(turno.precio)
+      : calcularPrecioEstimado(cancha.precio, hora);
+
     setSelected({
       cancha,
       turno,
       fecha: selectedDate.key,
       hora,
-      precio: turno ? Number(turno.precio) : DEFAULT_PRICE,
+      precio: precioEstimado ?? 0,
     });
   }
 
@@ -204,7 +218,6 @@ export default function Reservar() {
           id_cancha: selected.cancha.id_cancha,
           fecha: selected.fecha,
           hora: selected.hora,
-          precio: selected.precio,
         }),
       });
       const data = await response.json();
@@ -304,16 +317,21 @@ export default function Reservar() {
                         </td>
                         {hours.map((h) => {
                           const turno = turnosByCanchaAndHour.get(`${cancha.id_cancha}-${h}`);
-                          const isOccupied = turno ? OCCUPIED_STATES.includes(turno.estado_turno) : false;
+                          const isOccupied = turno
+                            ? OCCUPIED_STATES.includes(turno.estado_turno) || turno.bloqueos.length > 0
+                            : false;
                           const isSelected =
                             selected?.cancha.id_cancha === cancha.id_cancha &&
                             selected?.fecha === selectedDate.key &&
                             selected?.hora === h;
                           const isAvailable = !isOccupied;
+                          const isBlocked = turno ? turno.bloqueos.length > 0 : false;
                           const cls = isSelected
                             ? "bg-lime text-lime-foreground ring-2 ring-lime"
                             : isAvailable
                             ? "bg-success/15 text-success hover:bg-success/25"
+                            : isBlocked
+                            ? "bg-destructive/15 text-destructive cursor-not-allowed"
                             : turno
                             ? "bg-muted text-muted-foreground/60 cursor-not-allowed"
                             : "bg-destructive/10 text-destructive cursor-not-allowed line-through";
@@ -325,7 +343,13 @@ export default function Reservar() {
                                 onClick={() => handleSelectSlot(cancha, turno, h)}
                                 className={`w-full h-10 rounded-lg text-xs font-semibold transition ${cls}`}
                               >
-                                {isSelected ? "OK" : isAvailable ? "Libre" : turno?.estado_turno ?? "-"}
+                                {isSelected
+                                  ? "OK"
+                                  : isAvailable
+                                  ? "Libre"
+                                  : turno && turno.bloqueos.length > 0
+                                  ? "Bloqueado"
+                                  : turno?.estado_turno ?? "-"}
                               </button>
                             </td>
                           );
@@ -337,10 +361,11 @@ export default function Reservar() {
               </table>
             </div>
             <div className="border-t border-border p-3 flex items-center gap-4 text-xs text-muted-foreground">
-              <Legend color="bg-success/40" label="Libre" />
-              <Legend color="bg-muted" label="Reservado" />
-              <Legend color="bg-lime" label="Seleccionado" />
-            </div>
+            <Legend color="bg-success/40" label="Libre" />
+            <Legend color="bg-muted" label="Reservado" />
+            <Legend color="bg-destructive/30" label="Bloqueado" />
+            <Legend color="bg-lime" label="Seleccionado" />
+          </div>
           </div>
 
           {activeCanchas.length > 0 && (
@@ -385,17 +410,32 @@ export default function Reservar() {
                   <Row label="Por jugador (x4)" value={`$${formatPrice(selected.precio / 4)}`} highlight />
                 </div>
 
+                {selected.cancha.precio === null && !selected.turno && (
+                  <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
+                    Esta cancha no tiene un precio base configurado. No vas a poder confirmar la reserva hasta que el admin lo configure.
+                  </div>
+                )}
+
                 <div className="mt-5 p-3 rounded-xl bg-accent/40 text-xs text-foreground/80 flex gap-2">
                   <Info className="size-4 shrink-0 mt-0.5 text-primary" />
                   La reserva queda asociada a tu usuario y el turno pasa a Reservado.
                 </div>
 
+                {(!selected.turno && selected.cancha.precio === null) ? (
+                <span
+                  className="mt-5 block w-full text-center bg-primary/40 text-primary-foreground/60 font-semibold py-3 rounded-xl cursor-not-allowed select-none"
+                  aria-disabled="true"
+                >
+                  Confirmar y armar partido
+                </span>
+              ) : (
                 <Link
                   href="/lobby"
                   className="mt-5 block w-full text-center bg-primary text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 transition"
                 >
                   Confirmar y armar partido
                 </Link>
+              )}
 
                 {confirmed ? (
                   <div className="mt-2 w-full flex items-center justify-center gap-2 bg-success/15 text-success font-semibold py-3 rounded-xl text-sm">
@@ -403,7 +443,10 @@ export default function Reservar() {
                   </div>
                 ) : (
                   <button
-                    disabled={selected.turno ? OCCUPIED_STATES.includes(selected.turno.estado_turno) : false}
+                    disabled={
+                      (selected.turno ? OCCUPIED_STATES.includes(selected.turno.estado_turno) : false) ||
+                      (!selected.turno && selected.cancha.precio === null)
+                    }
                     onClick={() => setConfirmOpen(true)}
                     className="mt-2 block w-full text-center bg-secondary text-secondary-foreground font-semibold py-3 rounded-xl hover:bg-accent transition disabled:opacity-50"
                   >

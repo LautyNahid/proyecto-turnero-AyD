@@ -20,6 +20,7 @@ export type ReservaWithRelations = Prisma.ReservaGetPayload<{
 export type CreateReservaData = {
   id_jugador: string;
   id_turno: number;
+  precio?: number;
 };
 
 export type CreateReservaWithTurnoData = {
@@ -83,20 +84,23 @@ export class PrismaReservaRepository implements ReservaRepository {
   }
 
   create(data: CreateReservaData) {
-    return db.$transaction(async (tx) => {
-      const reserva = await tx.reserva.create({
-        data,
-        include: reservaInclude,
-      });
-
-      await tx.turno.update({
-        where: { id_turno: data.id_turno },
-        data: { estado_turno: "Reservado" },
-      });
-
-      return reserva;
+  return db.$transaction(async (tx) => {
+    const reserva = await tx.reserva.create({
+      data: { id_jugador: data.id_jugador, id_turno: data.id_turno },
+      include: reservaInclude,
     });
-  }
+
+    await tx.turno.update({
+      where: { id_turno: data.id_turno },
+      data: {
+        estado_turno: "Reservado",
+        ...(data.precio !== undefined ? { precio: data.precio } : {}),
+      },
+    });
+
+    return reserva;
+  });
+}
 
   createWithTurno(data: CreateReservaWithTurnoData) {
     return db.$transaction(async (tx) => {

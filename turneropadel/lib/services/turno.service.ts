@@ -114,20 +114,26 @@ export class TurnoService {
   }
 
   obtenerTurnosFiltrados(searchParams: URLSearchParams) {
-    const fechaDesde = parseOptionalFecha(searchParams.get("fechaDesde"));
-    const fechaHasta = parseOptionalFecha(searchParams.get("fechaHasta"));
-    const ocupados = searchParams.get("ocupados") === "true";
+  const fechaDesde = parseOptionalFecha(searchParams.get("fechaDesde"));
+  const fechaHasta = parseOptionalFecha(searchParams.get("fechaHasta"));
+  const ocupados = searchParams.get("ocupados") === "true";
 
-    if (!fechaDesde && !fechaHasta && !ocupados) {
-      return this.obtenerTurnos();
-    }
-
-    return this.repository.findMany({
-      fechaDesde,
-      fechaHasta,
-      estados: ocupados ? ESTADOS_OCUPADOS : undefined,
-    });
+  if (!fechaDesde && !fechaHasta && !ocupados) {
+    return this.obtenerTurnos();
   }
+
+  return this.repository.findManyConBloqueos({
+    fechaDesde,
+    fechaHasta,
+    estados: ocupados ? ESTADOS_OCUPADOS : undefined,
+  });
+}
+
+  obtenerTurnosConBloqueos(searchParams: URLSearchParams) {
+  const fechaDesde = parseOptionalFecha(searchParams.get("fechaDesde"));
+  const fechaHasta = parseOptionalFecha(searchParams.get("fechaHasta"));
+  return this.repository.findManyConBloqueos({ fechaDesde, fechaHasta });
+ }
 
   async obtenerTurnoPorId(idParam: string) {
     const id_turno = parseTurnoId(idParam);
