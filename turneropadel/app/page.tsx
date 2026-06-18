@@ -2,9 +2,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 
 export default async function HomePage() {
-  // Ahora esperamos la promesa de auth()
   const { userId } = await auth();
-
+// Si el usuario estaba logeado se lo envia directamente al dashboard
   if (userId) {
     redirect("/dashboard");
   } else {
