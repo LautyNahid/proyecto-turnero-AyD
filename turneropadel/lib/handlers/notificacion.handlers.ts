@@ -4,6 +4,7 @@ import { reservaRepository } from "@/lib/repositories/reserva.repository";
 import { TipoNotificacion } from "@prisma/client";
 import { db } from "@/lib/db";
 import { NotificacionMailService } from "@/lib/services/notificacionMail.service";
+import { usuarioRepository } from "@/lib/repositories/usuario.repository";
 
 const globalForNotificacionHandlers = globalThis as unknown as {
   notificacionHandlersInitialized?: boolean;
@@ -13,19 +14,59 @@ export function registrarHandlersNotificacion() {
   if (globalForNotificacionHandlers.notificacionHandlersInitialized) return;
   globalForNotificacionHandlers.notificacionHandlersInitialized = true;
 
-  escuchar("lobby.confirmado", async ({ id_lobby }) => {
+  escuchar("lobby.confirmado", async ({ id_reserva }) => {
     try {
-      const jugadores = await db.lobbyJugador.findMany({
-        where: { id_lobby },
-        select: { id_jugador: true },
-      });
-
+      const lobby = await reservaRepository.findLobbyByReservaId(id_reserva);
+      if (!lobby) {
+        throw new Error("datos incompletos");
+      }
       await notificacionRepository.crearVarias(
-        jugadores.map((lj) => ({
+        lobby.jugadores.map((lj) => ({
           id_destinatario: lj.id_jugador,
           tipo: TipoNotificacion.LobbyConfirmado,
         })),
       );
+
+      //llamada a servicio de notificacion mail
+      for (const integrante of lobby.jugadores) {
+        await NotificacionMailService.notificarLobbyConfirmado(
+          integrante.jugador.usuario.correo_electronico,
+          {
+            nombreJugador: integrante.jugador.usuario.nombre,
+            fechaReserva: lobby.turno.fecha.toISOString(),
+            nombreCancha: lobby.turno.cancha.nro_cancha,
+          },
+        );
+      }
+    } catch (error) {
+      console.error("[handler] lobby.confirmado error:", error);
+    }
+  });
+
+  escuchar("lobby.cancelado", async ({ id_reserva }) => {
+    try {
+      const lobby = await reservaRepository.findLobbyByReservaId(id_reserva);
+      if (!lobby) {
+        throw new Error("datos incompletos");
+      }
+      await notificacionRepository.crearVarias(
+        lobby.jugadores.map((lj) => ({
+          id_destinatario: lj.id_jugador,
+          tipo: TipoNotificacion.CancelacionLobby,
+        })),
+      );
+
+      //llamada a servicio de notificacion mail
+      for (const integrante of lobby.jugadores) {
+        await NotificacionMailService.notificarLobbyCancelado(
+          integrante.jugador.usuario.correo_electronico,
+          {
+            nombreJugador: integrante.jugador.usuario.nombre,
+            fechaReserva: lobby.turno.fecha.toISOString(),
+            nombreCancha: lobby.turno.cancha.nro_cancha,
+          },
+        );
+      }
     } catch (error) {
       console.error("[handler] lobby.confirmado error:", error);
     }
@@ -97,6 +138,33 @@ export function registrarHandlersNotificacion() {
         reserva.jugador.usuario.correo_electronico,
         {
           nombreJugador: reserva.jugador.usuario.nombre,
+          fechaReserva: reserva.turno.fecha.toISOString(),
+          nombreCancha: reserva.turno.cancha.nro_cancha,
+        },
+      );
+    } catch (error) {
+      console.error("[handler] solicitud.aceptada error:", error);
+    }
+  });
+
+  escuchar("jugador.expulsado", async ({ id_reserva, id_jugador }) => {
+    try {
+      const reserva = await reservaRepository.findById(id_reserva);
+      const usuario = await usuarioRepository.findById(id_jugador);
+      if (!reserva || !usuario) {
+        throw new Error("datos incompletos");
+      }
+      //crea notificacion en db
+      await notificacionRepository.crear({
+        id_destinatario: id_jugador,
+        tipo: TipoNotificacion.JugadorExpulsado,
+      });
+
+      //llamada a servicio de notificacion mail
+      await NotificacionMailService.notificarJugadorExpulsado(
+        usuario.correo_electronico,
+        {
+          nombreJugador: usuario.nombre,
           fechaReserva: reserva.turno.fecha.toISOString(),
           nombreCancha: reserva.turno.cancha.nro_cancha,
         },

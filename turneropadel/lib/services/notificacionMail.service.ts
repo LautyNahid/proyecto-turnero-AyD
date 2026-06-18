@@ -2,6 +2,9 @@ import { MailService } from "@/lib/services/mail.service";
 import {
   confirmarReservaTemplate,
   cancelarReservaTemplate,
+  jugadorExpulsadoTemplate,
+  jugadorLobbyCanceladoTemplate,
+  jugadorLobbyConfirmadoTemplate,
 } from "@/lib/templates";
 import { DatosReservaMail } from "@/lib/types";
 
@@ -13,6 +16,21 @@ export const NotificacionMailService = {
 
   async notificarReservaCancelada(email: string, datos: DatosReservaMail) {
     const mail = cancelarReservaTemplate(datos);
+    await this.enviar(email, mail);
+  },
+
+  async notificarJugadorExpulsado(email: string, datos: DatosReservaMail) {
+    const mail = jugadorExpulsadoTemplate(datos);
+    await this.enviar(email, mail);
+  },
+
+  async notificarLobbyCancelado(email: string, datos: DatosReservaMail) {
+    const mail = jugadorLobbyCanceladoTemplate(datos);
+    await this.enviar(email, mail);
+  },
+
+  async notificarLobbyConfirmado(email: string, datos: DatosReservaMail) {
+    const mail = jugadorLobbyConfirmadoTemplate(datos);
     await this.enviar(email, mail);
   },
 

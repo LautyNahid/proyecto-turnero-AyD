@@ -3,11 +3,14 @@ import { EventEmitter } from "events";
 // Tipos de eventos
 
 type EventosApp = {
-  "lobby.confirmado": { id_lobby: number };
+  "lobby.confirmado": { id_reserva: number };
   "solicitud.aceptada": { id_lobby: number; id_jugador: string };
   "solicitud.rechazada": { id_lobby: number; id_jugador: string };
   "reserva.confirmada": { id_reserva: number };
   "reserva.cancelada": { id_reserva: number };
+
+  "jugador.expulsado": { id_reserva: number; id_jugador: string };
+  "lobby.cancelado": { id_reserva: number };
 };
 
 type NombreEvento = keyof EventosApp;
