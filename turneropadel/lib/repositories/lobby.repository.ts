@@ -304,3 +304,24 @@ export async function liberarTurno(client: DbClient, id_turno: number) {
     data: { estado_turno: "Disponible" },
   });
 }
+
+export async function desvincularTurno(
+  client: DbClient,
+  id_lobby: number
+): Promise<Lobby> {
+  return client.lobby.update({
+    where: { id_lobby },
+    data: { id_turno: null },
+  });
+}
+
+// notificaciones
+export async function cancelarTodasLasSolicitudes(
+  client: DbClient,
+  id_lobby: number
+) {
+  return client.solicitud.updateMany({
+    where: { id_lobby, estado_solicitud: "Pendiente" },
+    data: { estado_solicitud: "Cancelada" },
+  });
+}

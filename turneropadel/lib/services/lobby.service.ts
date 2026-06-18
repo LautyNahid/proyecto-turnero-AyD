@@ -67,6 +67,12 @@ function assertHayCupos(faltantes: number) {
   if (faltantes <= 0) throw new Error("El partido ya está completo");
 }
 
+function assertTurnoVinculado(
+  id_turno: number | null
+): asserts id_turno is number {
+  if (id_turno === null) throw new Error("El lobby no tiene un turno vinculado");
+}
+
 //  Service 
 
 export async function listarLobbies(
@@ -164,9 +170,15 @@ export async function actualizarEstadoLobby(
     assertLobbyExiste(lobby);
     assertEsOrganizador(lobby.id_creador, id_solicitante);
 
+    if (estado_lobby === "Cancelado" && lobby.id_turno === null) {
+      throw new Error("El lobby ya fue cancelado");
+    }
+
     const updated = await db.$transaction(async (tx) => {
-          if (estado_lobby === "Cancelado") {
+          if (estado_lobby === "Cancelado" && lobby.id_turno !== null) {
             await repo.liberarTurno(tx, lobby.id_turno);
+            await repo.cancelarTodasLasSolicitudes(tx, id_lobby);
+            await repo.desvincularTurno(tx, id_lobby);
           }
           return repo.updateEstadoLobby(tx, id_lobby, { estado_lobby });
         });
@@ -234,6 +246,7 @@ export async function responderSolicitud(
       assertLobbyExiste(lobby);
       assertEsOrganizador(lobby.id_creador, id_organizador);
       assertLobbyAbierto(lobby.estado_lobby);
+      assertTurnoVinculado(lobby.id_turno);
 
       const solicitud = await repo.findSolicitudById(tx, id_solicitud);
       if (!solicitud) throw new Error("Solicitud no encontrada");
