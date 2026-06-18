@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { HeaderAuth } from "@/components/layout/headerAuth";
 
 const navMain = [
   { to: "/", label: "Inicio", icon: LayoutDashboard },
@@ -134,19 +135,13 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
             <Bell className="size-4" />
             <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-lime ring-2 ring-card" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="size-9 rounded-full bg-gradient-to-br from-primary to-sidebar text-primary-foreground flex items-center justify-center text-sm font-semibold">
-              MR
-            </div>
-            <div className="hidden sm:block">
-              <div className="text-sm font-semibold leading-tight">Martín R.</div>
-              <div className="text-[11px] text-muted-foreground">Cat. 5ta · Drive</div>
-            </div>
-          </div>
+          <HeaderAuth />
         </header>
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8 max-w-[1400px] w-full mx-auto">
-          {children}
-        </main>
+        <div className="flex-1 overflow-y-auto">
+          <main className="p-6 lg:p-8 max-w-[1400px] w-full mx-auto">
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   );
