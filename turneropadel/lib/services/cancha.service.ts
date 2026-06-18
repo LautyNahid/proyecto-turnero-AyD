@@ -64,6 +64,22 @@ export class CanchaService {
     return cancha;
   }
 
+  async obtenerUbicacion(idParam: string) {
+  await this.obtenerCanchaPorId(idParam); // valida que la cancha exista (404 si no)
+
+  const latitud = process.env.COMPLEJO_LATITUD;
+  const longitud = process.env.COMPLEJO_LONGITUD;
+
+  if (!latitud || !longitud) {
+    throw new ServiceError("La ubicacion del complejo no esta configurada", 500);
+  }
+
+  return {
+    latitud: Number(latitud),
+    longitud: Number(longitud),
+  };
+}
+
   async crearCancha(body: unknown) {
     const payload = ensureObject(body);
     const data: CreateCanchaData = {
