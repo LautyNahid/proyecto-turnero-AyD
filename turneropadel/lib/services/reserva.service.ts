@@ -35,6 +35,10 @@ function parsePositiveInteger(value: unknown, fieldName: string): number {
   return value;
 }
 
+function parseTurnoIdFromLobby(value: unknown): number {
+  return parsePositiveInteger(value, "id_turno");
+}
+
 function parseReservaId(value: string): number {
   const id = Number(value);
 
@@ -122,65 +126,106 @@ export class ReservaService {
   }
 
   async crearReserva(body: unknown, idJugadorAutenticado?: string) {
-    const payload = ensureObject(body);
-    const id_jugador = idJugadorAutenticado ?? parseJugadorId(payload.id_jugador);
+  const payload = ensureObject(body);
 
-    await this.ensureJugadorExists(id_jugador);
+  if ("id_lobby" in payload) {
+    return this.crearReservaDesdeLobby(payload);
+  }
 
-    try {
-      if ("id_turno" in payload) {
-        const data: CreateReservaData = {
-          id_jugador,
-          id_turno: parsePositiveInteger(payload.id_turno, "id_turno"),
-        };
+  const id_jugador = idJugadorAutenticado ?? parseJugadorId(payload.id_jugador);
 
-        await this.ensureTurnoReservable(data.id_turno);
+  await this.ensureJugadorExists(id_jugador);
 
-        return await this.repository.create(data);
-      }
-
-      const data: CreateReservaWithTurnoData = {
+  try {
+    if ("id_turno" in payload) {
+      const data: CreateReservaData = {
         id_jugador,
-        id_cancha: parsePositiveInteger(payload.id_cancha, "id_cancha"),
-        fecha: parseFecha(payload.fecha),
-        hora: parseHora(payload.hora),
-        precio: parsePrecio(payload.precio),
+        id_turno: parsePositiveInteger(payload.id_turno, "id_turno"),
       };
 
-      await this.ensureCanchaExists(data.id_cancha);
+      await this.ensureTurnoReservable(data.id_turno);
 
-      const turnoExistente = await this.turnoRepo.findBySchedule({
-        id_cancha: data.id_cancha,
-        fecha: data.fecha,
-        hora: data.hora,
-      });
-
-      if (turnoExistente) {
-        if (TURNOS_OCUPADOS.includes(turnoExistente.estado_turno)) {
-          throw new ServiceError("El turno no esta disponible para reservar", 409);
-        }
-
-        await this.ensureTurnoSinReserva(turnoExistente.id_turno);
-
-        return await this.repository.create({
-          id_jugador,
-          id_turno: turnoExistente.id_turno,
-        });
-      }
-
-      return await this.repository.createWithTurno(data);
-    } catch (error) {
-      if (isKnownPrismaError(error, "P2002")) {
-        throw new ServiceError("El turno ya tiene una reserva asociada", 409);
-      }
-
-      if (isKnownPrismaError(error, "P2003")) {
-        throw new ServiceError("Jugador o turno inexistente", 404);
-      }
-
-      throw error;
+      return await this.repository.create(data);
     }
+
+    const data: CreateReservaWithTurnoData = {
+      id_jugador,
+      id_cancha: parsePositiveInteger(payload.id_cancha, "id_cancha"),
+      fecha: parseFecha(payload.fecha),
+      hora: parseHora(payload.hora),
+      precio: parsePrecio(payload.precio),
+    };
+
+    await this.ensureCanchaExists(data.id_cancha);
+
+    const turnoExistente = await this.turnoRepo.findBySchedule({
+      id_cancha: data.id_cancha,
+      fecha: data.fecha,
+      hora: data.hora,
+    });
+
+    if (turnoExistente) {
+      if (TURNOS_OCUPADOS.includes(turnoExistente.estado_turno)) {
+        throw new ServiceError("El turno no esta disponible para reservar", 409);
+      }
+
+      await this.ensureTurnoSinReserva(turnoExistente.id_turno);
+
+      return await this.repository.create({
+        id_jugador,
+        id_turno: turnoExistente.id_turno,
+      });
+    }
+
+    return await this.repository.createWithTurno(data);
+  } catch (error) {
+    if (isKnownPrismaError(error, "P2002")) {
+      throw new ServiceError("El turno ya tiene una reserva asociada", 409);
+    }
+    if (isKnownPrismaError(error, "P2003")) {
+      throw new ServiceError("Jugador o turno inexistente", 404);
+    }
+    throw error;
   }
+}
+
+private async crearReservaDesdeLobby(payload: Record<string, unknown>) {
+  const id_lobby = parsePositiveInteger(payload.id_lobby, "id_lobby");
+  const id_turno = parsePositiveInteger(payload.id_turno, "id_turno");
+  const id_jugador = parseJugadorId(payload.id_jugador);
+
+  await this.ensureJugadorExists(id_jugador);
+  await this.ensureTurnoBloqueadoPorLobby(id_turno, id_lobby);
+
+  try {
+    return await this.repository.create({ id_jugador, id_turno });
+  } catch (error) {
+    if (isKnownPrismaError(error, "P2002")) {
+      throw new ServiceError("El turno ya tiene una reserva asociada", 409);
+    }
+    if (isKnownPrismaError(error, "P2003")) {
+      throw new ServiceError("Jugador o turno inexistente", 404);
+    }
+    throw error;
+  }
+}
+
+private async ensureTurnoBloqueadoPorLobby(id_turno: number, id_lobby: number) {
+  const turno = await this.turnoRepo.findById(id_turno);
+
+  if (!turno) {
+    throw new ServiceError("El turno indicado no existe", 404);
+  }
+
+  if (turno.estado_turno !== "Reservado") {
+    throw new ServiceError(
+      `El turno no está bloqueado por el lobby ${id_lobby}`,
+      409
+    );
+  }
+
+  await this.ensureTurnoSinReserva(id_turno);
+}
 
   async eliminarReserva(idParam: string) {
     const id_reserva = parseReservaId(idParam);
