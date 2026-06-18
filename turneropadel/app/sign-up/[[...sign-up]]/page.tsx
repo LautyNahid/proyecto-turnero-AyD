@@ -1,35 +1,54 @@
 import { Trophy } from "lucide-react";
 import { SignUp } from "@clerk/nextjs";
+import Image from "next/image";
 
 export default function SignUpPage() {
   return (
     <div className="min-h-screen flex">
-      {/* Lado izquierdo (Branding) */}
-      <div
-        className="hidden lg:flex flex-col justify-between w-1/2 p-12 text-primary-foreground relative overflow-hidden"
-        style={{ background: "var(--gradient-court)" }}
-      >
-        <div className="flex items-center gap-2">
+      {/* Lado izquierdo Marca */}
+      <div className="hidden lg:flex flex-col justify-between lg:w-[60%] p-12 xl:p-20 relative overflow-hidden bg-zinc-950 text-white">
+        
+        {/* Imagen de fondo con capa oscura (Overlay) */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/fondo_signup.jpg" 
+            alt="Fondo de cancha de pádel"
+            fill
+            className="object-cover opacity-60 mix-blend-luminosity"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-green-950/90 via-zinc-950/80 to-black/95" />
+        </div>
+
+        {/* Logo superior */}
+        <div className="relative z-10 flex items-center gap-2">
           <div className="size-10 rounded-xl bg-lime flex items-center justify-center text-lime-foreground">
             <Trophy className="size-5" />
           </div>
-          <span className="font-bold text-lg">SalePadel</span>
+          <span className="font-bold text-lg tracking-wide">SalePadel</span>
         </div>
-        <div className="relative z-10">
-          <h1 className="text-5xl font-bold leading-tight tracking-tight">
+
+        {/* Textos principales y Estadísticas */}
+        <div className="relative z-10 max-w-2xl">
+          <h1 className="text-5xl md:text-6xl font-black leading-[1.1] tracking-tighter text-white mb-6">
             Tu próximo<br />partido empieza<br /><span className="text-lime">acá.</span>
           </h1>
-          <p className="mt-6 text-primary-foreground/70 max-w-md">
+          <p className="text-lg md:text-xl text-gray-300 leading-relaxed mb-12">
             Reservá canchas, armá lobbies con tus amigos y conocé jugadores de tu nivel. Todo en un solo lugar.
           </p>
-          <div className="mt-10 grid grid-cols-3 gap-4 max-w-md">
+          
+          {/* Grilla de Estadísticas */}
+          <div className="grid grid-cols-3 gap-6 max-w-md border-t border-white/10 pt-8">
             <Stat n="120+" l="Complejos" />
             <Stat n="8.4k" l="Jugadores" />
             <Stat n="32k" l="Partidos" />
           </div>
         </div>
-        <div className="absolute right-0 bottom-0 size-[500px] rounded-full bg-lime/10 blur-3xl" />
-        <div className="text-xs text-primary-foreground/50">© 2026 SalePadel · Demo académica</div>
+
+        {/* Footer */}
+        <div className="relative z-10 text-xs text-white/40">
+          © 2026 SalePadel · Demo académica
+        </div>
       </div>
 
       {/* Lado derecho (Clerk Sign Up) */}
@@ -51,11 +70,12 @@ export default function SignUpPage() {
   );
 }
 
+// Componente Stat ajustado para la nueva paleta oscura
 function Stat({ n, l }: { n: string; l: string }) {
   return (
     <div>
-      <div className="text-2xl font-bold text-lime">{n}</div>
-      <div className="text-xs text-primary-foreground/60">{l}</div>
+      <div className="text-3xl font-black text-lime tracking-tight">{n}</div>
+      <div className="text-sm font-medium text-gray-400 mt-1 uppercase tracking-wider">{l}</div>
     </div>
   );
 }
