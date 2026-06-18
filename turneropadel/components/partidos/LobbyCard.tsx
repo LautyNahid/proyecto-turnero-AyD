@@ -18,7 +18,7 @@ export function LobbyCard({ lobby, onClick }: LobbyCardProps) {
   return (
     <button
       onClick={onClick}
-      className="bg-card rounded-2xl p-5 shadow-soft border border-border hover:shadow-card hover:-translate-y-0.5 transition group text-left w-full"
+      className="bg-card rounded-2xl p-5 shadow-soft border border-border hover:shadow-card hover:-translate-y-0.5 transition group text-left w-full cursor-pointer"
     >
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-lime text-lime-foreground">

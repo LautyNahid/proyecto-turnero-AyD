@@ -90,6 +90,35 @@ export async function findTurnoParaLobby(client: DbClient, id_turno: number) {
   });
 }
 
+export async function findTurnoBySchedule(
+  client: DbClient,
+  where: { id_cancha: number; fecha: Date; hora: string }
+) {
+  return client.turno.findFirst({
+    where,
+    select: {
+      id_turno: true,
+      estado_turno: true,
+      lobby: { select: { id_lobby: true } },
+    },
+  });
+}
+
+export async function createTurno(
+  client: DbClient,
+  data: { id_cancha: number; fecha: Date; hora: string; precio: number }
+) {
+  return client.turno.create({
+    data: {
+      id_cancha: data.id_cancha,
+      fecha: data.fecha,
+      hora: data.hora,
+      precio: data.precio,
+      estado_turno: "Disponible",
+    },
+  });
+}
+
 export async function createLobby(
   client: DbClient,
   data: { id_turno: number; id_creador: string; jugadores_faltantes: number }

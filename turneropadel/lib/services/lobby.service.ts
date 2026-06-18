@@ -7,13 +7,20 @@ import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
 import * as repo from "@/lib/repositories/lobby.repository";
 import { confirmarLobby } from "@/lib/services/lobby-reserva.service";
 import { emitir } from "@/lib/events";
+import { fromZonedTime } from "date-fns-tz";
 
 //Types
 
+const TIMEZONE = "America/Argentina/Buenos_Aires";
+
 type CrearLobbyInput = {
-  id_turno: number;
   id_creador: string;
   jugadores_faltantes: number;
+  id_turno?: number;
+  id_cancha?: number;
+  fecha?: string;
+  hora?: string;
+  precio?: number;
 };
 
 type ActualizarEstadoInput = {
@@ -87,7 +94,7 @@ export async function obtenerLobby(
 export async function crearLobby(
   input: CrearLobbyInput
 ): Promise<ApiResponse<Lobby | null>> {
-  const { id_turno, id_creador, jugadores_faltantes } = input;
+  const { id_turno, id_creador, jugadores_faltantes, id_cancha, fecha, hora, precio } = input;
 
   if (jugadores_faltantes < 1 || jugadores_faltantes > 3) {
     return fail("jugadores_faltantes debe ser entre 1 y 3");
@@ -95,15 +102,48 @@ export async function crearLobby(
 
   try {
     const lobby = await db.$transaction(async (tx) => {
-      const turno = await repo.findTurnoParaLobby(tx, id_turno);
+      let targetTurnoId = id_turno;
+
+      if (!targetTurnoId) {
+        if (!id_cancha || !fecha || !hora) {
+          throw new Error("Faltan datos para identificar o crear el turno");
+        }
+
+        const parsedFecha = fromZonedTime(`${fecha}T00:00:00`, TIMEZONE);
+        if (Number.isNaN(parsedFecha.getTime())) throw new Error("Fecha inválida");
+
+        const existing = await repo.findTurnoBySchedule(tx, {
+          id_cancha,
+          fecha: parsedFecha,
+          hora,
+        });
+
+        if (existing) {
+          targetTurnoId = existing.id_turno;
+        } else {
+          const nuevoTurno = await repo.createTurno(tx, {
+            id_cancha,
+            fecha: parsedFecha,
+            hora,
+            precio: precio ?? 12000,
+          });
+          targetTurnoId = nuevoTurno.id_turno;
+        }
+      }
+
+      const turno = await repo.findTurnoParaLobby(tx, targetTurnoId!);
       if (!turno) throw new Error("Turno no encontrado");
       if (turno.estado_turno !== "Disponible")
         throw new Error("El turno no está disponible");
       if (turno.lobby) throw new Error("El turno ya tiene un lobby asociado");
 
-      const nuevo = await repo.createLobby(tx, { id_turno, id_creador, jugadores_faltantes });
+      const nuevo = await repo.createLobby(tx, {
+        id_turno: targetTurnoId!,
+        id_creador,
+        jugadores_faltantes,
+      });
       await repo.createInscripcion(tx, nuevo.id_lobby, id_creador);
-      await repo.lockTurnoParaLobby(tx, id_turno);
+      await repo.lockTurnoParaLobby(tx, targetTurnoId!);
 
       return nuevo;
     });
@@ -270,4 +310,3 @@ export async function listarLobbiesDelJugador(
     return fail("Error al obtener lobbies del jugador");
   }
 }
-

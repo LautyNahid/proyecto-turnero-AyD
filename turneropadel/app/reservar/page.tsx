@@ -13,6 +13,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { JugadoresFaltantesDefault } from "@/lib/types";
 
 type Cancha = {
   id_cancha: number;
@@ -99,6 +100,9 @@ export default function Reservar() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [reserving, setReserving] = useState(false);
+  const [lobbyOpen, setLobbyOpen] = useState(false);
+  const [creatingLobby, setCreatingLobby] = useState(false);
+  const [lobbyCreated, setLobbyCreated] = useState(false);
 
   const days = useMemo(() => buildDays(), []);
   const selectedDate = days[day];
@@ -212,6 +216,53 @@ export default function Reservar() {
     }
   }
 
+  async function handleCreateLobby() {
+  if (!selected) return;
+
+  setCreatingLobby(true);
+  setError(null);
+
+  try {
+    const response = await fetch("/api/lobby", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...(selected.turno ? { id_turno: selected.turno.id_turno } : {}),
+        id_cancha: selected.cancha.id_cancha,
+        fecha: selected.fecha,
+        hora: selected.hora,
+        jugadores_faltantes: JugadoresFaltantesDefault,
+        precio: selected.precio
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error ?? "No se pudo crear el lobby");
+    }
+
+    await loadSchedule();
+
+    setSelected(null);
+    setLobbyCreated(true);
+    setLobbyOpen(false);
+
+    // Opcional:
+    // router.push(`/lobby/${data.id}`);
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : "No se pudo crear el lobby"
+    );
+  } finally {
+    setCreatingLobby(false);
+  }
+}
+
   return (
     <AppShell title="Reservar turno" subtitle="Elegi cancha, dia y horario">
       <div className="grid lg:grid-cols-[1fr_360px] gap-6">
@@ -236,6 +287,12 @@ export default function Reservar() {
           {confirmed && (
             <div className="mb-4 rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm font-semibold text-success">
               Reserva confirmada. 
+            </div>
+          )}
+
+          {lobbyCreated && (
+            <div className="mb-4 rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm font-semibold text-success">
+              Lobby creado correctamente.
             </div>
           )}
 
@@ -354,12 +411,20 @@ export default function Reservar() {
                   La reserva queda asociada a tu usuario y el turno pasa a Reservado.
                 </div>
 
-                <Link
-                  href="/lobby"
-                  className="mt-5 block w-full text-center bg-primary text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 transition"
-                >
-                  Confirmar y armar partido
-                </Link>
+                {lobbyCreated ? (
+                  <div className="mt-5 w-full flex items-center justify-center gap-2 bg-success/15 text-success font-semibold py-3 rounded-xl text-sm">
+                    <Check className="size-4" />
+                    Lobby creado
+                  </div>
+                ) : (
+                  <button
+                    disabled={selected.turno ? OCCUPIED_STATES.includes(selected.turno.estado_turno) : false}
+                    onClick={() => setLobbyOpen(true)}
+                    className="mt-5 block w-full text-center bg-primary text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
+                  >
+                    Confirmar y armar partido
+                  </button>
+                )}
 
                 {confirmed ? (
                   <div className="mt-2 w-full flex items-center justify-center gap-2 bg-success/15 text-success font-semibold py-3 rounded-xl text-sm">
@@ -406,6 +471,31 @@ export default function Reservar() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={lobbyOpen} onOpenChange={setLobbyOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar creación del lobby</DialogTitle>
+            <DialogDescription>
+              Se creará un lobby asociado a este turno para que otros jugadores puedan unirse.
+            </DialogDescription>
+          </DialogHeader>
+          {selected && (
+            <div className="py-2 text-sm text-muted-foreground space-y-1">
+              <div><span className="font-semibold text-foreground">Cancha: </span>{" "} Cancha {selected.cancha.nro_cancha} </div>
+              <div><span className="font-semibold text-foreground">Horario: </span>{" "} {selected.fecha} - {selected.hora} a{" "} {addHour(selected.hora)}</div>
+              <div><span className="font-semibold text-foreground">Precio: </span>{" "} ${formatPrice(selected.precio)}</div></div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLobbyOpen(false)} disabled={creatingLobby}>Cancelar</Button>
+            <Button onClick={handleCreateLobby} disabled={creatingLobby}>
+              {creatingLobby && (<Loader2 className="size-4 animate-spin" />)}
+              Crear lobby
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </AppShell>
   );
 }
