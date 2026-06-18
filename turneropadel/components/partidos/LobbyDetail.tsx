@@ -139,7 +139,7 @@ export function LobbyDetail({
           {lobby.jugadores.map((lj) => (
             <div key={lj.id_jugador} className="relative">
               <PlayerSlot jugador={toJugadorSlot(lj, lj.id_jugador === lobby.id_creador)} />
-              {esOrganizador && lj.id_jugador !== lobby.id_creador && (
+              {esOrganizador && lj.id_jugador !== lobby.id_creador && lobby.estado_lobby === "Abierto" && (
                 <button
                   onClick={() => onExpulsarJugador(lj.id_jugador)}
                   className="absolute top-2 right-2 size-7 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive flex items-center justify-center transition"
