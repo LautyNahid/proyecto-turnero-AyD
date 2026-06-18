@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { routeErrorResponse } from "@/lib/http/rest-response";
 import { canchaService } from "@/lib/services/cancha.service";
+import { requireRol } from "@/lib/auth";
 
 export async function GET() {
   try {
@@ -13,6 +14,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const { userId, response } = await requireRol("admin");
+    if (response) return response;
+    
     const body = await req.json();
     const cancha = await canchaService.crearCancha(body);
     const location = new URL(`/api/canchas/${cancha.id_cancha}`, req.url);
