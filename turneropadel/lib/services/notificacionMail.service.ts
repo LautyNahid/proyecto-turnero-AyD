@@ -3,6 +3,7 @@ import {
   confirmarReservaTemplate,
   cancelarReservaTemplate,
   recordatorioTurnoTemplate,
+  turnoFinalizadoTemplate,
 } from "@/lib/templates";
 import { DatosReservaMail } from "@/lib/types";
 
@@ -19,6 +20,11 @@ export const NotificacionMailService = {
 
   async notificarRecordatorioTurno(email: string, datos: DatosReservaMail) {
     const mail = recordatorioTurnoTemplate(datos);
+    await this.enviar(email, mail);
+  },
+
+  async notificarTurnoFinalizado(email: string, datos: DatosReservaMail) {
+    const mail = turnoFinalizadoTemplate(datos);
     await this.enviar(email, mail);
   },
 
