@@ -5,3 +5,5 @@ export * from "./jugadorLobbyCancelado.template";
 export * from "./jugadorLobbyConfirmado.template";
 export * from "./turnoRecordatorio.template";
 export * from "./turnoFinalizado.template";
+export * from "./solicitudAceptada.template";
+export * from "./solicitudRechazada.template"
