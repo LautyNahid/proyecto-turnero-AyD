@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, MoreHorizontal, Users2, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, parseLocalDate } from "@/lib/utils";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
 import type { ReservaWithRelations } from "@/lib/repositories/reserva.repository";
 
@@ -11,8 +11,8 @@ type EstadoTurno = "Disponible" | "Reservado" | "EnCurso" | "Finalizado";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatFecha(fecha: Date): string {
-  return new Date(fecha).toLocaleDateString("es-AR", {
+function formatFecha(fecha: string | Date): string {
+  return parseLocalDate(fecha).toLocaleDateString("es-AR", {
     weekday: "short",
     day: "numeric",
     month: "short",

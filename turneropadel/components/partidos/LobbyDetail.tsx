@@ -18,6 +18,7 @@ import { PlayerSlot } from "./PlayerSlot";
 import { SolicitudItem } from "./SolicitudItem";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
 import type { JugadorSlot } from "@/lib/types";
+import { parseLocalDate } from "@/lib/utils";
 
 // Types 
 
@@ -74,7 +75,7 @@ export function LobbyDetail({
   );
   const jugadoresConfirmados = lobby.jugadores.length;
   const lugaresVacios = lobby.jugadores_faltantes;
-  const fecha = new Date(lobby.turno.fecha).toLocaleDateString("es-AR", {
+  const fecha = parseLocalDate(lobby.turno.fecha).toLocaleDateString("es-AR", {
     weekday: "long",
     day: "numeric",
     month: "long",

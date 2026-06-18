@@ -1,6 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Cloud, Clock } from "lucide-react";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
+import { parseLocalDate } from "@/lib/utils";
 
 interface LobbyCardProps {
   lobby: LobbyConRelaciones;
@@ -9,7 +10,7 @@ interface LobbyCardProps {
 
 export function LobbyCard({ lobby, onClick }: LobbyCardProps) {
   const jugadoresActivos = lobby.jugadores.length;
-  const fecha = new Date(lobby.turno.fecha).toLocaleDateString("es-AR", {
+  const fecha = parseLocalDate(lobby.turno.fecha).toLocaleDateString("es-AR", {
     weekday: "short",
     day: "numeric",
     month: "short",
