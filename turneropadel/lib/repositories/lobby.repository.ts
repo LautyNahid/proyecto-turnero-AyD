@@ -76,6 +76,7 @@ export async function findLobbyParaValidacion(
       estado_lobby: true,
       jugadores_faltantes: true,
       id_turno: true,
+      id_reserva: true,
     },
   });
 }

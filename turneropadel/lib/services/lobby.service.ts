@@ -183,6 +183,10 @@ export async function actualizarEstadoLobby(
           return repo.updateEstadoLobby(tx, id_lobby, { estado_lobby });
         });
 
+    if (estado_lobby === "Cancelado" && lobby.id_reserva) {
+      emitir("lobby.cancelado", { id_reserva: lobby.id_reserva });
+    }
+
     return ok(updated);
     
   } catch (e) {
@@ -279,8 +283,8 @@ export async function responderSolicitud(
 
     if (lobbyCompleto) {
       const confirmacion = await confirmarLobby({ id_lobby, id_turno: resultado.id_turno });
-      if (confirmacion.ok) {
-        emitir("lobby.confirmado", { id_lobby });
+      if (confirmacion.ok && confirmacion.id_reserva) {
+        emitir("lobby.confirmado", { id_reserva: confirmacion.id_reserva });
         lobby_confirmado = true;
       }
     }
