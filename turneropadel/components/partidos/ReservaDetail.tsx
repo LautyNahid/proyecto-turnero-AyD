@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Clock, Users, Loader2 } from "lucide-react";
+import { MapPin, Clock, Users, Loader2, Cloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useClima } from "@/hooks/useClima";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,8 @@ export function ReservaDetail({ reserva, onCancelarReserva }: ReservaDetailProps
     setCancelando(false);
     setConfirmOpen(false);
   }
+
+  const { clima, estado: climaEstado, error: climaError } = useClima(reserva.fecha_clima ?? null, reserva.hora ?? null);
 
   return (
     <div className="space-y-6">
@@ -56,6 +59,22 @@ export function ReservaDetail({ reserva, onCancelarReserva }: ReservaDetailProps
                 <Users className="size-3.5 shrink-0" />
                 {reserva.jugadoresConfirmados} jugadores confirmados
               </span>
+            </div>
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground">
+              <Cloud className="size-5 text-primary shrink-0" />
+              {climaEstado === "loading" ? (
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Loader2 className="size-3 animate-spin" /> Consultando el clima...
+                </span>
+              ) : climaError ? (
+                <span className="text-muted-foreground">{climaError}</span>
+              ) : clima ? (
+                <span className="font-semibold text-foreground">
+                  {Math.round(clima.temperatura_celsius)}° - {clima.descripcion}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">Clima no disponible</span>
+              )}
             </div>
           </div>
           <button

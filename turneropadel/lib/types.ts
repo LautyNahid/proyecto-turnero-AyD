@@ -57,6 +57,7 @@ export interface PartidoBase {
 export interface PartidoReserva extends PartidoBase {
   tipo: "reserva";
   jugadoresConfirmados: number;
+  fecha_clima?: string;
 }
 
 export interface PartidoLobby extends PartidoBase {

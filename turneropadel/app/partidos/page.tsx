@@ -64,6 +64,9 @@ function toLobbyPartido(lobby: LobbyConRelaciones): PartidoLobby {
 }
 
 function toReservaPartido(reserva: ReservaWithRelations): PartidoReserva {
+  const fechaClimaLocal = parseLocalDate(reserva.turno.fecha);
+  const fechaClima = `${fechaClimaLocal.getFullYear()}-${String(fechaClimaLocal.getMonth() + 1).padStart(2, "0")}-${String(fechaClimaLocal.getDate()).padStart(2, "0")}`;
+
   return {
     id: reserva.id_reserva,
     tipo: "reserva",
@@ -77,6 +80,7 @@ function toReservaPartido(reserva: ReservaWithRelations): PartidoReserva {
     cancha: `Cancha ${reserva.turno.cancha.nro_cancha}`,
     duracionMin: 90,
     jugadoresConfirmados: 1,
+    fecha_clima: fechaClima,
   };
 }
 

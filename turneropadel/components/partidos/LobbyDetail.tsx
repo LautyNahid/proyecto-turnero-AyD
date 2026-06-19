@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { MapPin, Clock, MessageSquare , Share2, Check, UserMinus } from "lucide-react";
+import { MapPin, Clock, MessageSquare , Share2, Check, UserMinus, Cloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LobbyChat } from "./LobbyChat";
+import { useClima } from "@/hooks/useClima";
 
 import {
   Dialog,
@@ -88,6 +89,13 @@ export function LobbyDetail({
   const hora = lobby.turno?.hora ?? "—";
   const cancha = lobby.turno?.cancha?.nro_cancha ?? "—";
   const nombreLobby = tieneTurno ? `Cancha ${cancha} · ${hora}` : "Turno no asignado";
+  const fechaClima = lobby.turno
+    ? (() => {
+        const localDate = parseLocalDate(lobby.turno!.fecha);
+        return `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
+      })()
+    : null;
+  const { clima, estado: climaEstado, error: climaError } = useClima(fechaClima, lobby.turno?.hora ?? null);
   const [chatOpen, setChatOpen] = useState(false);
 
   async function handleAceptar(id_solicitud: number) {
@@ -124,6 +132,22 @@ export function LobbyDetail({
                 <Clock className="size-3.5 shrink-0" />
                 90 min
               </span>
+            </div>
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-3 text-sm text-foreground">
+              <Cloud className="size-5 text-primary shrink-0" />
+              {climaEstado === "loading" ? (
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <span className="animate-spin">⏳</span> Consultando el clima...
+                </span>
+              ) : climaError ? (
+                <span className="text-muted-foreground">{climaError}</span>
+              ) : clima ? (
+                <span className="font-semibold text-foreground">
+                  {Math.round(clima.temperatura_celsius)}° - {clima.descripcion}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">Clima no disponible</span>
+              )}
             </div>
           </div>
             {esOrganizador && lobby.estado_lobby !== "Cancelado" && (
