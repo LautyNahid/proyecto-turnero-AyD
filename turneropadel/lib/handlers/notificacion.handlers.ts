@@ -11,11 +11,10 @@ const globalForNotificacionHandlers = globalThis as unknown as {
 };
 
 function combinarFechaYHora(fecha: Date, hora: string): string {
-  const fechaString = fecha.toISOString().split('T')[0];
-  const [year, month, day] = fechaString.split('-');
+  const fechaString = fecha.toISOString().split("T")[0];
+  const [year, month, day] = fechaString.split("-");
   return `${day}/${month}/${year} a las ${hora}`;
 }
-
 
 export function registrarHandlersNotificacion() {
   if (globalForNotificacionHandlers.notificacionHandlersInitialized) return;
@@ -25,7 +24,7 @@ export function registrarHandlersNotificacion() {
   escuchar("lobby.confirmado", async ({ id_reserva }) => {
     try {
       const lobby = await reservaRepository.findLobbyByReservaId(id_reserva);
-      if (!lobby) {
+      if (!lobby || !lobby.turno) {
         throw new Error("datos incompletos");
       }
       await notificacionRepository.crearVarias(
@@ -36,7 +35,10 @@ export function registrarHandlersNotificacion() {
       );
 
       //llamada a servicio de notificacion mail
-      const fechaYHora = combinarFechaYHora(lobby.turno.fecha, lobby.turno.hora);
+      const fechaYHora = combinarFechaYHora(
+        lobby.turno.fecha,
+        lobby.turno.hora,
+      );
       for (const integrante of lobby.jugadores) {
         await NotificacionMailService.notificarLobbyConfirmado(
           integrante.jugador.usuario.correo_electronico,
@@ -56,7 +58,7 @@ export function registrarHandlersNotificacion() {
   escuchar("lobby.cancelado", async ({ id_reserva }) => {
     try {
       const lobby = await reservaRepository.findLobbyByReservaId(id_reserva);
-      if (!lobby) {
+      if (!lobby || !lobby.turno) {
         throw new Error("datos incompletos");
       }
       await notificacionRepository.crearVarias(
@@ -65,7 +67,10 @@ export function registrarHandlersNotificacion() {
           tipo: TipoNotificacion.CancelacionLobby,
         })),
       );
-      const fechaYHora = combinarFechaYHora(lobby.turno.fecha, lobby.turno.hora);
+      const fechaYHora = combinarFechaYHora(
+        lobby.turno.fecha,
+        lobby.turno.hora,
+      );
       //llamada a servicio de notificacion mail
       for (const integrante of lobby.jugadores) {
         await NotificacionMailService.notificarLobbyCancelado(
@@ -96,7 +101,10 @@ export function registrarHandlersNotificacion() {
       if (!reserva || !jugador) {
         throw new Error("datos incompletos");
       }
-      const fechaYHora = combinarFechaYHora(reserva.turno.fecha, reserva.turno.hora);
+      const fechaYHora = combinarFechaYHora(
+        reserva.turno.fecha,
+        reserva.turno.hora,
+      );
       await NotificacionMailService.notificarSolicitudAceptada(
         jugador.usuario.correo_electronico,
         {
@@ -124,7 +132,10 @@ export function registrarHandlersNotificacion() {
       if (!reserva || !jugador) {
         throw new Error("datos incompletos");
       }
-      const fechaYHora = combinarFechaYHora(reserva.turno.fecha, reserva.turno.hora);
+      const fechaYHora = combinarFechaYHora(
+        reserva.turno.fecha,
+        reserva.turno.hora,
+      );
       await NotificacionMailService.notificarSolicitudRechazada(
         jugador.usuario.correo_electronico,
         {
@@ -152,9 +163,12 @@ export function registrarHandlersNotificacion() {
       });
 
       //llamada a servicio de notificacion mail
-      
-      const fechaYHora = combinarFechaYHora(reserva.turno.fecha, reserva.turno.hora);
-      
+
+      const fechaYHora = combinarFechaYHora(
+        reserva.turno.fecha,
+        reserva.turno.hora,
+      );
+
       await NotificacionMailService.notificarReservaConfirmada(
         reserva.jugador.usuario.correo_electronico,
         {
@@ -182,7 +196,10 @@ export function registrarHandlersNotificacion() {
       });
 
       //llamada a servicio de notificacion mail
-      const fechaYHora = combinarFechaYHora(reserva.turno.fecha, reserva.turno.hora);
+      const fechaYHora = combinarFechaYHora(
+        reserva.turno.fecha,
+        reserva.turno.hora,
+      );
       await NotificacionMailService.notificarReservaCancelada(
         reserva.jugador.usuario.correo_electronico,
         {
@@ -195,7 +212,6 @@ export function registrarHandlersNotificacion() {
       console.error("[handler] reserva.cancelada error:", error);
     }
   });
-
 
   //JUGADOR EXPULSADO
   escuchar("jugador.expulsado", async ({ id_reserva, id_jugador }) => {
@@ -212,7 +228,10 @@ export function registrarHandlersNotificacion() {
       });
 
       //llamada a servicio de notificacion mail
-      const fechaYHora = combinarFechaYHora(reserva.turno.fecha, reserva.turno.hora);
+      const fechaYHora = combinarFechaYHora(
+        reserva.turno.fecha,
+        reserva.turno.hora,
+      );
       await NotificacionMailService.notificarJugadorExpulsado(
         usuario.correo_electronico,
         {
@@ -230,7 +249,7 @@ export function registrarHandlersNotificacion() {
   escuchar("turno.recordatorio", async ({ id_reserva }) => {
     try {
       const lobby = await reservaRepository.findLobbyByReservaId(id_reserva);
-      if (!lobby) {
+      if (!lobby || !lobby.turno) {
         throw new Error("datos incompletos");
       }
       await notificacionRepository.crearVarias(
@@ -241,7 +260,10 @@ export function registrarHandlersNotificacion() {
       );
 
       //llamada a servicio de notificacion mail
-      const fechaYHora = combinarFechaYHora(lobby.turno.fecha, lobby.turno.hora);
+      const fechaYHora = combinarFechaYHora(
+        lobby.turno.fecha,
+        lobby.turno.hora,
+      );
       for (const integrante of lobby.jugadores) {
         await NotificacionMailService.notificarRecordatorioTurno(
           integrante.jugador.usuario.correo_electronico,
@@ -260,7 +282,7 @@ export function registrarHandlersNotificacion() {
   escuchar("turno.finalizado", async ({ id_reserva }) => {
     try {
       const lobby = await reservaRepository.findLobbyByReservaId(id_reserva);
-      if (!lobby) {
+      if (!lobby || !lobby.turno) {
         throw new Error("datos incompletos");
       }
       await notificacionRepository.crearVarias(
@@ -271,7 +293,10 @@ export function registrarHandlersNotificacion() {
       );
 
       //llamada a servicio de notificacion mail
-      const fechaYHora = combinarFechaYHora(lobby.turno.fecha, lobby.turno.hora);
+      const fechaYHora = combinarFechaYHora(
+        lobby.turno.fecha,
+        lobby.turno.hora,
+      );
       for (const integrante of lobby.jugadores) {
         await NotificacionMailService.notificarTurnoFinalizado(
           integrante.jugador.usuario.correo_electronico,
