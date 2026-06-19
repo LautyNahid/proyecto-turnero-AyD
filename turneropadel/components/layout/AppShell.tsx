@@ -78,7 +78,6 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
               );
             })}
           </ul>
-
           <div className="text-[10px] uppercase tracking-wider text-sidebar-foreground/50 px-3 mt-6 mb-2">
             Administración
           </div>
@@ -105,9 +104,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
               );
             })}
           </ul>
-        </nav>
-
-       
+        </nav>       
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -115,13 +112,6 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
           <div className="flex-1 min-w-0">
             {title && <h1 className="text-lg font-bold tracking-tight truncate">{title}</h1>}
             {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
-          </div>
-          <div className="hidden lg:flex items-center gap-2 px-3 h-9 rounded-full bg-muted text-muted-foreground text-sm w-72">
-            <Search className="size-4" />
-            <input
-              placeholder="Buscar canchas, jugadores..."
-              className="bg-transparent outline-none flex-1 text-foreground placeholder:text-muted-foreground"
-            />
           </div>
           <NotificationsDropdown />
           <HeaderAuth />
