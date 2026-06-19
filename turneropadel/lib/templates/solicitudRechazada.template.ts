@@ -1,12 +1,6 @@
 import { DatosReservaMail } from "@/lib/types";
 
 export function solicitudRechazadaTemplate(datos: DatosReservaMail) {
-  // Formateo de fecha a formato AR
-  const fecha = new Date(datos.fechaReserva);
-  const fechaFormateada = new Intl.DateTimeFormat("es-AR", {
-    dateStyle: "full",
-    timeStyle: "short",
-  }).format(fecha);
 
   const subject = "🎾 Actualización sobre tu solicitud de partido";
 
@@ -17,7 +11,7 @@ export function solicitudRechazadaTemplate(datos: DatosReservaMail) {
       <p>Queríamos avisarte que, lamentablemente, tu solicitud para unirte al partido en <strong>Complejo Bahiense</strong> no pudo ser aceptada (es posible que el cupo ya se haya llenado).</p>
       
       <div style="background-color: #f4f4f5; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
-        <p style="margin: 5px 0;"><strong>📅 Fecha y Hora:</strong> ${fechaFormateada}</p>
+        <p style="margin: 5px 0;"><strong>📅 Fecha y Hora:</strong> ${datos.fechaReserva}</p>
         <p style="margin: 5px 0;"><strong>🏟️ Cancha:</strong> ${datos.nombreCancha}</p>
       </div>
 
