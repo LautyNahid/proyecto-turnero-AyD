@@ -160,7 +160,7 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query, onCancela
               return (
                 <tr key={`lobby-${lobby.id_lobby}`} className="border-t border-border hover:bg-muted/30">
                   <td className="p-3 pl-5 font-mono text-xs text-muted-foreground">L-{lobby.id_lobby}</td>
-                  <td className="p-3 font-mono text-xs text-muted-foreground">T-{lobby.turno.id_turno}</td>
+                  <td className="p-3 font-mono text-xs text-muted-foreground">T-{lobby.turno?.id_turno ?? '—'}</td>
                   <td className="p-3"><TypeBadge tipo="lobby" /></td>
                   <td className="p-3">
                     <div className="font-semibold">{formatFecha(lobby.turno?.fecha)}</div>
