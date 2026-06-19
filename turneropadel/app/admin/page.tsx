@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { CanchasCrudProvider, CanchasCrudSection, CanchasKpi } from "@/components/admin/CanchasCrud";
 import { AppShell } from "@/components/layout/AppShell";
 import { Calendar } from "lucide-react";
@@ -31,10 +30,6 @@ export default function Admin() {
             <CanchasCrudSection />
 
             <BloqueoSection />
-
-            <Link href="/admin/reportes" className="text-sm font-semibold text-primary hover:underline">
-              Ver reportes detallados
-            </Link>
           </div>
 
           <aside className="bg-card rounded-2xl border border-border shadow-card overflow-hidden h-fit sticky top-24">
