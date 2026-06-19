@@ -1,6 +1,7 @@
 import { evaluacionRepository, isKnownPrismaError } from "@/lib/repositories/evaluacion.repository";
 import { ServiceError } from "@/lib/services/service-error";
 import { db } from "@/lib/db";
+import { reservaRepository } from "@/lib/repositories/reserva.repository";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -16,6 +17,14 @@ function parsePositiveInteger(value: unknown, field: string): number {
     throw new ServiceError(`${field} debe ser un entero positivo`, 400);
   }
   return value;
+}
+
+function parseIdFromParam(value: string, field: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new ServiceError(`${field} debe ser un entero positivo`, 400);
+  }
+  return parsed;
 }
 
 function ensureObject(body: unknown): Record<string, unknown> {
@@ -70,6 +79,66 @@ export class EvaluacionService {
       }
       throw error;
     }
+  }
+
+  async obtenerEstadoEvaluacion(idReservaParam: string, id_usuario: string) {
+    const id_reserva = parseIdFromParam(idReservaParam, "id_reserva");
+
+    const reserva = await db.reserva.findUnique({
+      where: { id_reserva },
+      include: { turno: true, lobby: true },
+    });
+
+    if (!reserva) {
+      throw new ServiceError("Reserva no encontrada", 404);
+    }
+
+    if (reserva.turno.estado_turno !== "Finalizado") {
+      throw new ServiceError("El turno todavía no finalizó", 400);
+    }
+
+    const esLobby = reserva.lobby !== null;
+    type CompanieroEstado = { id_usuario: string; nombre: string; evaluado: boolean; puntaje: number | null };
+    let companeros: CompanieroEstado[] = [];
+
+    if (esLobby) {
+      const lobby = await reservaRepository.findLobbyByReservaId(id_reserva);
+      if (!lobby) {
+        throw new ServiceError("Lobby no encontrado", 404);
+      }
+
+      const participa = lobby.jugadores.some((lj) => lj.id_jugador === id_usuario);
+      if (reserva.id_jugador !== id_usuario && !participa) {
+        throw new ServiceError("No participaste de esta reserva", 403);
+      }
+
+      companeros = await Promise.all(
+        lobby.jugadores
+          .filter((lj) => lj.id_jugador !== id_usuario)
+          .map(async (lj) => {
+            const evaluacion = await evaluacionRepository.buscarEvaluacionJugador(id_usuario, lj.id_jugador, id_reserva);
+            return {
+              id_usuario: lj.id_jugador,
+              nombre: `${lj.jugador.usuario.nombre} ${lj.jugador.usuario.apellido}`.trim(),
+              evaluado: evaluacion !== null,
+              puntaje: evaluacion?.puntaje ?? null,
+            };
+          }),
+      );
+    } else if (reserva.id_jugador !== id_usuario) {
+      throw new ServiceError("No participaste de esta reserva", 403);
+    }
+
+    const evaluacionTurno = await evaluacionRepository.buscarEvaluacionTurno(id_usuario, reserva.id_turno);
+
+    return {
+      tipo: esLobby ? "lobby" : "directa",
+      companeros,
+      turno: {
+        evaluado: evaluacionTurno !== null,
+        puntaje: evaluacionTurno?.puntaje ?? null,
+      },
+    };
   }
 
   async evaluarTurno(body: unknown, id_jugador: string) {

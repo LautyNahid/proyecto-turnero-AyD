@@ -25,6 +25,7 @@ type Tab = (typeof tabs)[number];
 
 interface Partido {
   id: number;
+  id_turno: number;
   club: string;
   date: string;
   court: string;
@@ -87,14 +88,15 @@ export default function Perfil() {
   }
 
   function abrirEvaluacion(reserva: (typeof agenda)[number]) {
-    setPartidoSeleccionado({
-      id: reserva.id_reserva,
-      club: "ComplejoPadel",
-      court: `Cancha ${reserva.turno.cancha.nro_cancha}`,
-      date: `${reserva.turno.fecha.slice(0, 10)} - ${reserva.turno.hora}`,
-      status: reserva.turno.estado_turno,
-    });
-  }
+  setPartidoSeleccionado({
+    id: reserva.id_reserva,
+    id_turno: reserva.turno.id_turno,
+    club: "ComplejoPadel",
+    court: `Cancha ${reserva.turno.cancha.nro_cancha}`,
+    date: `${reserva.turno.fecha.slice(0, 10)} - ${reserva.turno.hora}`,
+    status: reserva.turno.estado_turno,
+  });
+}
 
   function abrirPartido(reserva: (typeof agenda)[number]) {
     router.push(`/partidos?tipo=reserva&id=${reserva.id_reserva}`);
@@ -202,7 +204,11 @@ export default function Perfil() {
                       {reserva.turno.fecha.slice(0, 10)} - {reserva.turno.hora}
                     </div>
                   </div>
-                  <span className="text-xs font-semibold text-muted-foreground">{reserva.turno.estado_turno}</span>
+                  {tab === "Completados" ? (
+                    <span className="text-xs font-semibold text-primary">Toca para evaluar</span>
+                  ) : (
+                    <span className="text-xs font-semibold text-muted-foreground">{reserva.turno.estado_turno}</span>
+                  )}
                 </button>
               ))}
             </div>

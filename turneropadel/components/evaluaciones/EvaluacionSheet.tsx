@@ -8,14 +8,13 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Star, User, Users, ClipboardList, Loader2, ChevronLeft } from "lucide-react";
+import { Star, User, ClipboardList, Loader2, ChevronLeft, CheckCircle2 } from "lucide-react";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
-type OpcionEvaluacion = "companero" | "contrincante1" | "contrincante2" | "turno";
-
 interface Partido {
   id: number;
+  id_turno: number;
   club: string;
   date: string;
   court: string;
@@ -27,14 +26,31 @@ interface EvaluacionSheetProps {
   onClose: () => void;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+type CompanieroEstado = {
+  id_usuario: string;
+  nombre: string;
+  evaluado: boolean;
+  puntaje: number | null;
+};
 
-const OPCIONES: { key: OpcionEvaluacion; label: string; sublabel: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: "companero", label: "Tu compañero", sublabel: "Jugador de tu lado", icon: User },
-  { key: "contrincante1", label: "Contrincante 1", sublabel: "Jugador del equipo rival", icon: Users },
-  { key: "contrincante2", label: "Contrincante 2", sublabel: "Jugador del equipo rival", icon: Users },
-  { key: "turno", label: "El turno", sublabel: "Evaluá la cancha y el horario", icon: ClipboardList },
-];
+type EstadoEvaluacion = {
+  tipo: "lobby" | "directa";
+  companeros: CompanieroEstado[];
+  turno: { evaluado: boolean; puntaje: number | null };
+};
+
+type Opcion = {
+  key: string;
+  label: string;
+  sublabel: string;
+  icon: React.ComponentType<{ className?: string }>;
+  disabled: boolean;
+  puntajeActual: number | null;
+  kind: "jugador" | "turno";
+  id_evaluado?: string;
+};
+
+// ─── Helpers de UI ───────────────────────────────────────────────────────────
 
 function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [hover, setHover] = useState(0);
@@ -50,9 +66,7 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
         >
           <Star
             className={`size-8 transition ${
-              star <= (hover || value)
-                ? "fill-lime text-lime"
-                : "text-muted-foreground"
+              star <= (hover || value) ? "fill-lime text-lime" : "text-muted-foreground"
             }`}
           />
         </button>
@@ -61,27 +75,79 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
   );
 }
 
+function buildOpciones(estado: EstadoEvaluacion): Opcion[] {
+  const opciones: Opcion[] = estado.companeros.map((c) => ({
+    key: `jugador-${c.id_usuario}`,
+    label: c.nombre,
+    sublabel: "Compañero de partido",
+    icon: User,
+    disabled: c.evaluado,
+    puntajeActual: c.puntaje,
+    kind: "jugador",
+    id_evaluado: c.id_usuario,
+  }));
+
+  opciones.push({
+    key: "turno",
+    label: "El turno",
+    sublabel: "Cancha y horario",
+    icon: ClipboardList,
+    disabled: estado.turno.evaluado,
+    puntajeActual: estado.turno.puntaje,
+    kind: "turno",
+  });
+
+  return opciones;
+}
+
 // ─── Sheet ───────────────────────────────────────────────────────────────────
 
 export function EvaluacionSheet({ partido, open, onClose }: EvaluacionSheetProps) {
-  const [opcionSeleccionada, setOpcionSeleccionada] = useState<OpcionEvaluacion | null>(null);
+  const [estado, setEstado] = useState<EstadoEvaluacion | null>(null);
+  const [cargando, setCargando] = useState(false);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
+
+  const [opcionSeleccionada, setOpcionSeleccionada] = useState<Opcion | null>(null);
   const [puntaje, setPuntaje] = useState(0);
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Reset al cerrar
   useEffect(() => {
-    if (!open) {
+    if (!open || !partido) {
+      setEstado(null);
       setOpcionSeleccionada(null);
       setPuntaje(0);
-      setEnviando(false);
       setEnviado(false);
       setError(null);
+      return;
     }
-  }, [open]);
 
-  // Reset puntaje al cambiar opción
+    let cancelado = false;
+    setCargando(true);
+    setErrorCarga(null);
+
+    fetch(`/api/reserva/${partido.id}/evaluaciones`)
+      .then(async (res) => {
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? "No se pudo cargar la evaluación");
+        return json as EstadoEvaluacion;
+      })
+      .then((data) => {
+        if (!cancelado) setEstado(data);
+      })
+      .catch((err) => {
+        if (!cancelado) setErrorCarga(err instanceof Error ? err.message : "Error de red");
+      })
+      .finally(() => {
+        if (!cancelado) setCargando(false);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [open, partido]);
+
   useEffect(() => {
     setPuntaje(0);
     setEnviado(false);
@@ -94,14 +160,11 @@ export function EvaluacionSheet({ partido, open, onClose }: EvaluacionSheetProps
     setError(null);
 
     try {
-      const esTurno = opcionSeleccionada === "turno";
-      const endpoint = esTurno
-        ? "/api/evaluaciones/turno"
-        : "/api/evaluaciones/jugador";
-
+      const esTurno = opcionSeleccionada.kind === "turno";
+      const endpoint = esTurno ? "/api/evaluaciones/turno" : "/api/evaluaciones/jugador";
       const body = esTurno
-        ? { id_turno: partido.id, puntaje }
-        : { id_reserva: partido.id, tipo: opcionSeleccionada, puntaje };
+        ? { id_turno: partido.id_turno, puntaje }
+        : { id_evaluado: opcionSeleccionada.id_evaluado, id_reserva: partido.id, puntaje };
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -114,7 +177,21 @@ export function EvaluacionSheet({ partido, open, onClose }: EvaluacionSheetProps
         setError(json.error ?? "Error al enviar la evaluación");
         return;
       }
+
       setEnviado(true);
+      // refrescamos el estado para que la opción quede deshabilitada al volver
+      setEstado((prev) => {
+        if (!prev) return prev;
+        if (esTurno) {
+          return { ...prev, turno: { evaluado: true, puntaje } };
+        }
+        return {
+          ...prev,
+          companeros: prev.companeros.map((c) =>
+            c.id_usuario === opcionSeleccionada.id_evaluado ? { ...c, evaluado: true, puntaje } : c,
+          ),
+        };
+      });
     } catch {
       setError("Error de red");
     } finally {
@@ -124,7 +201,7 @@ export function EvaluacionSheet({ partido, open, onClose }: EvaluacionSheetProps
 
   if (!partido) return null;
 
-  const opcionActual = OPCIONES.find((o) => o.key === opcionSeleccionada);
+  const opciones = estado ? buildOpciones(estado) : [];
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -147,35 +224,60 @@ export function EvaluacionSheet({ partido, open, onClose }: EvaluacionSheetProps
           </p>
         </SheetHeader>
 
+        {cargando && (
+          <div className="flex items-center justify-center h-32 gap-2 text-muted-foreground">
+            <Loader2 className="size-5 animate-spin" /> Cargando...
+          </div>
+        )}
+
+        {errorCarga && (
+          <div className="text-sm text-destructive bg-destructive/10 px-4 py-3 rounded-lg text-center">
+            {errorCarga}
+          </div>
+        )}
+
         {/* ── Paso 1 — elegir qué evaluar ── */}
-        {!opcionSeleccionada && (
-          <div className="grid grid-cols-2 gap-3 pb-6">
-            {OPCIONES.map((op) => (
+        {!cargando && !errorCarga && estado && !opcionSeleccionada && (
+        <div className={opciones.length === 1 ? "flex justify-center pb-6" : "grid grid-cols-2 gap-3 pb-6"}>
+          {opciones.map((op) => (
               <button
                 key={op.key}
-                onClick={() => setOpcionSeleccionada(op.key)}
-                className="flex flex-col items-center gap-2 bg-card border border-border rounded-2xl p-5 hover:border-primary hover:bg-primary/5 transition text-center"
+                disabled={op.disabled}
+                onClick={() => !op.disabled && setOpcionSeleccionada(op)}
+                className={`flex flex-col items-center gap-2 border rounded-2xl p-5 text-center transition ${
+                  opciones.length === 1 ? "w-48" : ""
+                } ${
+                  op.disabled
+                    ? "bg-muted border-border opacity-60 cursor-not-allowed"
+                    : "bg-card border-border hover:border-primary hover:bg-primary/5"
+                }`}
               >
                 <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <op.icon className="size-5 text-primary" />
                 </div>
                 <div className="font-semibold text-sm">{op.label}</div>
-                <div className="text-[11px] text-muted-foreground">{op.sublabel}</div>
+                {op.disabled ? (
+                  <div className="flex items-center gap-1 text-[11px] text-success font-semibold">
+                    <CheckCircle2 className="size-3" /> Evaluado · {op.puntajeActual}★
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-muted-foreground">{op.sublabel}</div>
+                )}
               </button>
             ))}
           </div>
         )}
 
         {/* ── Paso 2 — puntuar ── */}
-        {opcionSeleccionada && opcionActual && (
+        {opcionSeleccionada && (
           <div className="pb-6 space-y-6">
             <div className="flex flex-col items-center gap-4 py-4">
               <div className="size-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <opcionActual.icon className="size-7 text-primary" />
+                <opcionSeleccionada.icon className="size-7 text-primary" />
               </div>
               <div className="text-center">
-                <div className="font-bold text-lg">{opcionActual.label}</div>
-                <div className="text-sm text-muted-foreground">{opcionActual.sublabel}</div>
+                <div className="font-bold text-lg">{opcionSeleccionada.label}</div>
+                <div className="text-sm text-muted-foreground">{opcionSeleccionada.sublabel}</div>
               </div>
               <StarRating value={puntaje} onChange={setPuntaje} />
               <div className="text-sm text-muted-foreground">

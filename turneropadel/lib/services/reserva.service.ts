@@ -122,7 +122,7 @@ export class ReservaService {
   }
 
   obtenerReservasPorJugador(id_jugador: string) {
-    return this.repository.findByJugadorId(id_jugador);
+    return this.repository.findHistorialJugador(id_jugador);
   }
 
   async obtenerReservaPorId(idParam: string) {
