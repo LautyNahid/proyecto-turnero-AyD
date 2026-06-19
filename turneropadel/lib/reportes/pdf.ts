@@ -10,6 +10,10 @@ export function generarPdfReporteSemanal(datos: ReporteDatos): Promise<Buffer> {
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
+    const canchaDemandada = datos.canchas.find(
+      (c) => c.id_cancha === datos.metricas_globales.cancha_mas_demandada,
+    );
+
     doc.fontSize(18).text("Reporte Semanal — SalePadel", { align: "center" });
     doc.moveDown();
     doc.fontSize(11).text(`Período: ${datos.periodo.inicio} al ${datos.periodo.fin}`);
@@ -18,7 +22,7 @@ export function generarPdfReporteSemanal(datos: ReporteDatos): Promise<Buffer> {
     doc.fontSize(14).text("Métricas globales");
     doc.fontSize(11);
     doc.text(`Total ingresos: ${datos.metricas_globales.total_ingresos}`);
-    doc.text(`Cancha más demandada (id): ${datos.metricas_globales.cancha_mas_demandada ?? "N/A"}`);
+    doc.text(`Cancha más demandada: ${canchaDemandada ? `Cancha ${canchaDemandada.nro_cancha}` : "N/A"}`);
     doc.text(`Hora pico global: ${datos.metricas_globales.hora_pico_global ?? "N/A"}`);
     doc.text(`% Cancelaciones: ${datos.metricas_globales.porcentaje_cancelaciones}%`);
     doc.moveDown();
