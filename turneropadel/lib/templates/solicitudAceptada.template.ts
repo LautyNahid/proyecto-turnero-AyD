@@ -1,12 +1,6 @@
 import { DatosReservaMail } from "@/lib/types";
 
 export function solicitudAceptadaTemplate(datos: DatosReservaMail) {
-  // Formateo de fecha a formato AR
-  const fecha = new Date(datos.fechaReserva);
-  const fechaFormateada = new Intl.DateTimeFormat("es-AR", {
-    dateStyle: "full",
-    timeStyle: "short",
-  }).format(fecha);
 
   const subject = "✅ ¡Estás adentro! Tu solicitud fue aceptada";
 
@@ -17,7 +11,7 @@ export function solicitudAceptadaTemplate(datos: DatosReservaMail) {
       <p>¡Excelentes noticias! El creador del partido ha <strong>aceptado tu solicitud</strong> para unirte al lobby en <strong>Complejo Bahiense</strong>.</p>
       
       <div style="background-color: #f4f4f5; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #a3e635;">
-        <p style="margin: 5px 0;"><strong>📅 Fecha y Hora:</strong> ${fechaFormateada}</p>
+        <p style="margin: 5px 0;"><strong>📅 Fecha y Hora:</strong> ${datos.fechaReserva}</p>
         <p style="margin: 5px 0;"><strong>🏟️ Cancha:</strong> ${datos.nombreCancha}</p>
       </div>
 

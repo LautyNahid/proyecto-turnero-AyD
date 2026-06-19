@@ -1,13 +1,7 @@
 import { DatosReservaMail } from "@/lib/types";
 
 export function turnoFinalizadoTemplate(datos: DatosReservaMail) {
-  // Formateo de fecha a formato AR
-  const fecha = new Date(datos.fechaReserva);
-  const fechaFormateada = new Intl.DateTimeFormat("es-AR", {
-    dateStyle: "full",
-    timeStyle: "short",
-  }).format(fecha);
-
+  
   const subject = "🍻 ¡Tercer tiempo! ¿Cómo estuvo el partido?";
 
   const html = `
@@ -17,7 +11,7 @@ export function turnoFinalizadoTemplate(datos: DatosReservaMail) {
       <p>Esperamos que hayas dejado todo en la cancha y hayas disfrutado tu partido en <strong>Complejo Bahiense</strong>.</p>
       
       <div style="background-color: #f4f4f5; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #a3e635;">
-        <p style="margin: 5px 0;"><strong>📅 Jugado el:</strong> ${fechaFormateada}</p>
+        <p style="margin: 5px 0;"><strong>📅 Jugado el:</strong> ${datos.fechaReserva}</p>
         <p style="margin: 5px 0;"><strong>🏟️ Cancha:</strong> ${datos.nombreCancha}</p>
       </div>
 
