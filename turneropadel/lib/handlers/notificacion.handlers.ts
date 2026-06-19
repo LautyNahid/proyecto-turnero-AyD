@@ -143,7 +143,7 @@ export function registrarHandlersNotificacion() {
         lobby.turno.fecha,
         lobby.turno.hora,
       );
-      await NotificacionMailService.notificarSolicitudAceptada(
+      await NotificacionMailService.notificarSolicitudRechazada(
         jugador.usuario.correo_electronico,
         {
           nombreJugador: jugador.usuario.nombre,
