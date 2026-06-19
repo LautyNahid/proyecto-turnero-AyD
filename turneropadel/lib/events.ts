@@ -4,8 +4,8 @@ import { EventEmitter } from "events";
 
 type EventosApp = {
   "lobby.confirmado": { id_reserva: number };
-  "solicitud.aceptada": { id_reserva: number; id_jugador: string };
-  "solicitud.rechazada": { id_reserva: number; id_jugador: string  };
+  "solicitud.aceptada": { id_lobby: number; id_jugador: string };
+  "solicitud.rechazada": { id_lobby: number; id_jugador: string };
   "reserva.confirmada": { id_reserva: number };
   "reserva.cancelada": { id_reserva: number };
   "turno.recordatorio": { id_reserva: number };
