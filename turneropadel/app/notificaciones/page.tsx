@@ -3,7 +3,11 @@
 import { useState, useEffect } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Bell, CheckCheck } from "lucide-react";
-import { TipoNotificacion, EstadoNotificacion } from "@prisma/client";
+import {
+  EstadoNotificacion,
+  TIPO_NOTIFICACION_LABELS,
+  type TipoNotificacion,
+} from "@/lib/types/notificacion";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -18,18 +22,7 @@ interface Notificacion {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function labelTipo(tipo: TipoNotificacion): string {
-  const labels: Record<TipoNotificacion, string> = {
-    LobbyConfirmado: "¡Tu lobby fue confirmado!",
-    RecordatorioTurno: "Recordatorio de turno",
-    TurnoFinalizado: "Turno finalizado",
-    SolicitudRechazada: "Tu solicitud fue rechazada",
-    SolicitudAceptada: "¡Tu solicitud fue aceptada!",
-    JugadorExpulsado: "Fuiste expulsado del lobby",
-    CancelacionLobby: "Tu lobby fue cancelado",
-    ReservaConfirmada: "Reserva confirmada",
-    ReservaCancelada: "Reserva cancelada"
-  };
-  return labels[tipo];
+  return TIPO_NOTIFICACION_LABELS[tipo];
 }
 
 function formatFecha(fecha: string): string {
