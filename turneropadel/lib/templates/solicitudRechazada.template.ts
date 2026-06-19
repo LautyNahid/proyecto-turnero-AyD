@@ -8,7 +8,7 @@ export function solicitudRechazadaTemplate(datos: DatosReservaMail) {
     <div style="font-family: sans-serif; max-w: 600px; margin: 0 auto; color: #333;">
       <h2 style="color: #a3e635; background-color: #1a1a1a; padding: 10px 20px; border-radius: 8px;">SalePadel</h2>
       <h3>¡Hola ${datos.nombreJugador}!</h3>
-      <p>Queríamos avisarte que, lamentablemente, tu solicitud para unirte al partido en <strong>Complejo Bahiense</strong> no pudo ser aceptada (es posible que el cupo ya se haya llenado).</p>
+      <p>Queríamos avisarte que, lamentablemente, tu solicitud para unirte al partido en <strong>ComplejoPadel</strong> no pudo ser aceptada (es posible que el cupo ya se haya llenado).</p>
       
       <div style="background-color: #f4f4f5; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
         <p style="margin: 5px 0;"><strong>📅 Fecha y Hora:</strong> ${datos.fechaReserva}</p>

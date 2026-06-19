@@ -1,7 +1,7 @@
 import { DatosReservaMail } from "@/lib/types";
 
 export function cancelarReservaTemplate(datos: DatosReservaMail) {
-  const subject = "🎾 Reserva confirmada";
+  const subject = "🎾 Reserva Cancelada";
 
   const html = `
     <div style="font-family: sans-serif; max-w: 600px; margin: 0 auto; color: #333;">

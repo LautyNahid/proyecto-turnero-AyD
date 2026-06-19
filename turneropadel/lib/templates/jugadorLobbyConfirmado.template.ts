@@ -1,7 +1,7 @@
 import { DatosReservaMail } from "@/lib/types";
 
 export function jugadorLobbyConfirmadoTemplate(datos: DatosReservaMail) {
-  const subject = "✅ lobby cancelado";
+  const subject = "✅ lobby Confirmado";
 
   const html = `
     <div style="font-family: sans-serif; max-w: 600px; margin: 0 auto; color: #333;">
