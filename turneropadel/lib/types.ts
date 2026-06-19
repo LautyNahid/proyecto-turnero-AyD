@@ -7,6 +7,8 @@ export type ApiResponse<T> = {
 
 export type Rol = "jugador" | "empleado" | "admin";
 
+export const JugadoresFaltantesDefault = 3;
+
 export function ok<T>(data: T, meta?: Record<string, unknown>): ApiResponse<T> {
   return { data, error: null, ...(meta ? { meta } : {}) };
 }

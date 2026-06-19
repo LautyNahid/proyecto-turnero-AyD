@@ -2,6 +2,13 @@ import { MailService } from "@/lib/services/mail.service";
 import {
   confirmarReservaTemplate,
   cancelarReservaTemplate,
+  jugadorExpulsadoTemplate,
+  jugadorLobbyCanceladoTemplate,
+  jugadorLobbyConfirmadoTemplate,
+  recordatorioTurnoTemplate,
+  turnoFinalizadoTemplate,
+  solicitudAceptadaTemplate,
+  solicitudRechazadaTemplate,
 } from "@/lib/templates";
 import { DatosReservaMail } from "@/lib/types";
 
@@ -13,6 +20,40 @@ export const NotificacionMailService = {
 
   async notificarReservaCancelada(email: string, datos: DatosReservaMail) {
     const mail = cancelarReservaTemplate(datos);
+    await this.enviar(email, mail);
+  },
+
+  async notificarJugadorExpulsado(email: string, datos: DatosReservaMail) {
+    const mail = jugadorExpulsadoTemplate(datos);
+    await this.enviar(email, mail);
+  },
+
+  async notificarLobbyCancelado(email: string, datos: DatosReservaMail) {
+    const mail = jugadorLobbyCanceladoTemplate(datos);
+    await this.enviar(email, mail);
+  },
+
+  async notificarLobbyConfirmado(email: string, datos: DatosReservaMail) {
+    const mail = jugadorLobbyConfirmadoTemplate(datos);
+    await this.enviar(email, mail);
+  },
+  async notificarRecordatorioTurno(email: string, datos: DatosReservaMail) {
+    const mail = recordatorioTurnoTemplate(datos);
+    await this.enviar(email, mail);
+  },
+
+  async notificarTurnoFinalizado(email: string, datos: DatosReservaMail) {
+    const mail = turnoFinalizadoTemplate(datos);
+    await this.enviar(email, mail);
+  },
+
+  async notificarSolicitudAceptada(email: string, datos: DatosReservaMail) {
+    const mail = solicitudAceptadaTemplate(datos);
+    await this.enviar(email, mail);
+  },
+
+    async notificarSolicitudRechazada(email: string, datos: DatosReservaMail) {
+    const mail = solicitudRechazadaTemplate(datos);
     await this.enviar(email, mail);
   },
 

@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, MoreHorizontal, Users2, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, parseLocalDate } from "@/lib/utils";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
 import type { ReservaWithRelations } from "@/lib/repositories/reserva.repository";
 
@@ -11,9 +11,9 @@ type EstadoTurno = "Disponible" | "Reservado" | "EnCurso" | "Finalizado";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatFecha(fecha: Date): string {
-  return new Date(fecha).toLocaleDateString("es-AR", {
-    timeZone: "UTC",
+function formatFecha(fecha: string | Date | null | undefined): string {
+  if (fecha === null || fecha === undefined) return "Sin fecha";
+  return parseLocalDate(fecha).toLocaleDateString("es-AR", {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -108,7 +108,7 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query, onCancela
       return (
         String(l.id_lobby).includes(q) ||
         `${l.creador.usuario.nombre} ${l.creador.usuario.apellido}`.toLowerCase().includes(q) ||
-        `cancha ${l.turno.cancha.nro_cancha}`.toLowerCase().includes(q)
+        `cancha ${l.turno?.cancha?.nro_cancha ?? "sin turno"}`.toLowerCase().includes(q)
       );
     });
 
@@ -163,12 +163,12 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query, onCancela
                   <td className="p-3 font-mono text-xs text-muted-foreground">T-{lobby.turno.id_turno}</td>
                   <td className="p-3"><TypeBadge tipo="lobby" /></td>
                   <td className="p-3">
-                    <div className="font-semibold">{formatFecha(lobby.turno.fecha)}</div>
-                    <div className="text-xs text-muted-foreground">{lobby.turno.hora} hs</div>
+                    <div className="font-semibold">{formatFecha(lobby.turno?.fecha)}</div>
+                    <div className="text-xs text-muted-foreground">{lobby.turno?.hora ?? "—"} hs</div>
                   </td>
                   <td className="p-3">
                     <div className="inline-flex items-center gap-1.5 text-muted-foreground">
-                      <MapPin className="size-3.5" /> Cancha {lobby.turno.cancha.nro_cancha}
+                      <MapPin className="size-3.5" /> Cancha {lobby.turno?.cancha?.nro_cancha ?? "—"}
                     </div>
                   </td>
                   <td className="p-3 font-semibold">
@@ -179,7 +179,7 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query, onCancela
                   </td>
                   <td className="p-3"><StatusBadge estado={lobby.estado_lobby} /></td>
                   <td className="p-3 text-right font-semibold">
-                    ${Number(lobby.turno.precio).toLocaleString("es-AR")}
+                    ${lobby.turno?.precio ? Number(lobby.turno.precio).toLocaleString("es-AR") : "-"}
                   </td>
                   <td className="p-3 pr-5 text-right">
                     <button className="size-8 rounded-lg hover:bg-muted inline-flex items-center justify-center text-muted-foreground">

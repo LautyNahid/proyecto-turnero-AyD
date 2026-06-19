@@ -56,11 +56,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json(result, { status });
   }
 
-  const { solicitud, lobby_confirmado } = result.data!;
-
-  if (accion === "aceptar" && lobby_confirmado) {
-    emitir("lobby.confirmado", { id_lobby });
-  }
+  const { solicitud } = result.data!;
 
   if (accion === "aceptar") {
     emitir("solicitud.aceptada", {

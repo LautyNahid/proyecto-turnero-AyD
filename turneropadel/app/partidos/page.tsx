@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { MisPartidosList } from "@/components/partidos/MisPartidosList";
 import { LobbyDetail } from "@/components/partidos/LobbyDetail";
@@ -15,6 +16,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLobby } from "@/hooks/useLobby";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
+import { parseLocalDate } from "@/lib/utils";
 import type { ReservaWithRelations } from "@/lib/repositories/reserva.repository";
 import type { Partido, PartidoLobby, PartidoReserva } from "@/lib/types";
 
@@ -40,18 +42,20 @@ function toLobbyPartido(lobby: LobbyConRelaciones): PartidoLobby {
     status: "empty" as const,
   }));
 
+  const tieneTurno = Boolean(lobby.turno);
   return {
     id: lobby.id_lobby,
     tipo: "lobby",
-    fecha: new Date(lobby.turno.fecha).toLocaleDateString("es-AR", {
-      timeZone: "UTC",
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    }),
-    hora: lobby.turno.hora,
-    club: `Cancha ${lobby.turno.cancha.nro_cancha}`,
-    cancha: `Cancha ${lobby.turno.cancha.nro_cancha}`,
+    fecha: tieneTurno
+      ? parseLocalDate(lobby.turno!.fecha).toLocaleDateString("es-AR", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        })
+      : "Sin turno",
+    hora: lobby.turno?.hora ?? "—",
+    club: tieneTurno ? `Cancha ${lobby.turno!.cancha.nro_cancha}` : "Turno no asignado",
+    cancha: tieneTurno ? `Cancha ${lobby.turno!.cancha.nro_cancha}` : "Turno no asignado",
     duracionMin: 90,
     estado: lobby.estado_lobby,
     jugadores: [...jugadoresConfirmados, ...lugaresVacios],
@@ -63,8 +67,7 @@ function toReservaPartido(reserva: ReservaWithRelations): PartidoReserva {
   return {
     id: reserva.id_reserva,
     tipo: "reserva",
-    fecha: new Date(reserva.turno.fecha).toLocaleDateString("es-AR", {
-      timeZone: "UTC",
+    fecha: parseLocalDate(reserva.turno.fecha).toLocaleDateString("es-AR", {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -81,6 +84,9 @@ function toReservaPartido(reserva: ReservaWithRelations): PartidoReserva {
 
 export default function MisPartidosPage() {
   const isMobile = useIsMobile();
+  const searchParams = useSearchParams();
+  const requestedIdParam = searchParams.get("id");
+  const requestedTipoParam = searchParams.get("tipo");
   const [partidos, setPartidos] = useState<Partido[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedTipo, setSelectedTipo] = useState<"lobby" | "reserva" | null>(null);
@@ -98,29 +104,41 @@ export default function MisPartidosPage() {
     aceptarSolicitud,
     rechazarSolicitud,
     expulsarJugador,
+    cancelarLobby,
   } = useLobby(selectedId ?? 0);
 
   useEffect(() => {
     async function fetchPartidos() {
       setLoading(true);
       try {
+        
         const [resLobbies, resReservas] = await Promise.all([
           fetch("/api/lobby"),
           fetch("/api/reserva?jugador=me"),
         ]);
-
+        
         const lobbiesJson = resLobbies.ok ? await resLobbies.json() : { data: [] };
         const reservasJson = resReservas.ok ? await resReservas.json() : [];
-
+        
         const lobbies = (lobbiesJson.data as LobbyConRelaciones[]).map(toLobbyPartido);
         const reservas = (Array.isArray(reservasJson) ? reservasJson as ReservaWithRelations[] : []).map(toReservaPartido);
 
         const todos: Partido[] = [...lobbies, ...reservas];
 
+        const requestedId = Number(requestedIdParam);
+        const requestedTipo = requestedTipoParam;
+        const requestedPartido = todos.find(
+          (partido) =>
+            partido.id === requestedId &&
+            (requestedTipo === "lobby" || requestedTipo === "reserva") &&
+            partido.tipo === requestedTipo,
+        );
+        const initialPartido = requestedPartido ?? todos[0];
+
         setPartidos(todos);
-        if (todos.length > 0) {
-          setSelectedId(todos[0].id);
-          setSelectedTipo(todos[0].tipo);
+        if (initialPartido) {
+          setSelectedId(initialPartido.id);
+          setSelectedTipo(initialPartido.tipo);
         }
       } catch {
         setFetchError("Error de red");
@@ -130,40 +148,41 @@ export default function MisPartidosPage() {
     }
 
     fetchPartidos();
-  }, []);
+  }, [requestedIdParam, requestedTipoParam]);
 
   useEffect(() => {
     if (selectedId && selectedTipo === "lobby") cargarLobby(selectedId);
   }, [selectedId, selectedTipo, cargarLobby]);
 
-  function handleSelect(id: number) {
-    const partido = partidos.find((p) => p.id === id);
+  function handleSelect(id: number, tipo: Partido["tipo"]) {
+    const partido = partidos.find((p) => p.id === id && p.tipo === tipo);
     if (!partido) return;
     setSelectedId(id);
     setSelectedTipo(partido.tipo);
     if (isMobile) setSheetOpen(true);
   }
 
-  async function handleCancelarReserva(id_reserva: number) {
-  setCancelando(true);
-  try {
-    const res = await fetch(`/api/reserva/${id_reserva}`, { method: "DELETE" });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error ?? "No se pudo cancelar la reserva");
-    }
-
-    setPartidos((current) => current.filter((p) => !(p.tipo === "reserva" && p.id === id_reserva)));
+  async function handleCancelarReserva() {
+    if (!selectedId) return;
+    await fetch(`/api/reserva/${selectedId}`, { method: "DELETE" });
+    setPartidos((prev) => prev.filter((p) => p.id !== selectedId));
     setSelectedId(null);
     setSelectedTipo(null);
-  } catch (err) {
-    setFetchError(err instanceof Error ? err.message : "Error al cancelar la reserva");
-  } finally {
-    setCancelando(false);
   }
-}
 
-  const selectedPartido = partidos.find((p) => p.id === selectedId) ?? null;
+  const selectedPartido = partidos.find((p) => p.id === selectedId && p.tipo === selectedTipo) ?? null;
+
+  useEffect(() => {
+    if (selectedTipo !== "lobby" || !lobbyDetalle) return;
+
+    setPartidos((current) =>
+      current.map((partido) =>
+        partido.tipo === "lobby" && partido.id === lobbyDetalle.id_lobby
+          ? toLobbyPartido(lobbyDetalle)
+          : partido
+      )
+    );
+  }, [lobbyDetalle, selectedTipo]);
 
   const detailPanel = (() => {
     if (loading || estado === "loading") return <PanelSkeleton />;
@@ -185,11 +204,7 @@ export default function MisPartidosPage() {
     }
 
     if (selectedPartido.tipo === "reserva") {
-      return <ReservaDetail
-              reserva={selectedPartido}
-              onCancelar={() => handleCancelarReserva(selectedPartido.id)}
-              cancelando={cancelando}
-            />
+      return <ReservaDetail reserva={selectedPartido} onCancelarReserva={handleCancelarReserva} />;
     }
 
     if (lobbyError) {
@@ -208,6 +223,7 @@ export default function MisPartidosPage() {
         onAceptarSolicitud={aceptarSolicitud}
         onRechazarSolicitud={rechazarSolicitud}
         onExpulsarJugador={expulsarJugador}
+        onCancelarLobby={cancelarLobby}
       />
     );
   })();
@@ -221,6 +237,7 @@ export default function MisPartidosPage() {
             <MisPartidosList
               partidos={partidos}
               selectedId={selectedId}
+              selectedTipo={selectedTipo}
               onSelect={handleSelect}
             />
           </div>

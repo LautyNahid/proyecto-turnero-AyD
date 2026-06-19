@@ -15,15 +15,17 @@ import type { PartidoReserva } from "@/lib/types";
 
 interface ReservaDetailProps {
   reserva: PartidoReserva;
-  onCancelar: () => Promise<void>;
-  cancelando: boolean;
+  onCancelarReserva: () => Promise<void>;
 }
 
-export function ReservaDetail({ reserva, onCancelar, cancelando }: ReservaDetailProps) {
+export function ReservaDetail({ reserva, onCancelarReserva }: ReservaDetailProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
 
-  async function handleConfirm() {
-    await onCancelar();
+  async function handleCancelar() {
+    setCancelando(true);
+    await onCancelarReserva();
+    setCancelando(false);
     setConfirmOpen(false);
   }
 
@@ -33,50 +35,53 @@ export function ReservaDetail({ reserva, onCancelar, cancelando }: ReservaDetail
         className="rounded-2xl p-6 text-primary-foreground shadow-[var(--shadow-card)]"
         style={{ background: "var(--gradient-court)" }}
       >
-        <div className="text-xs uppercase tracking-wider text-primary-foreground/60">
-          Próximo partido
-        </div>
-        <div className="mt-1 text-3xl font-bold">
-          {reserva.fecha} · {reserva.hora}
-        </div>
-        <div className="mt-2 flex flex-wrap gap-3 text-sm text-primary-foreground/80">
-          <span className="flex items-center gap-1">
-            <MapPin className="size-3.5 shrink-0" />
-            {reserva.club} · {reserva.cancha}
-          </span>
-          <span className="flex items-center gap-1">
-            <Clock className="size-3.5 shrink-0" />
-            {reserva.duracionMin} min
-          </span>
-          <span className="flex items-center gap-1">
-            <Users className="size-3.5 shrink-0" />
-            {reserva.jugadoresConfirmados} jugadores confirmados
-          </span>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-xs uppercase tracking-wider text-primary-foreground/60">
+              Próximo partido
+            </div>
+            <div className="mt-1 text-3xl font-bold">
+              {reserva.fecha} · {reserva.hora}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-3 text-sm text-primary-foreground/80">
+              <span className="flex items-center gap-1">
+                <MapPin className="size-3.5 shrink-0" />
+                {reserva.club} · {reserva.cancha}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="size-3.5 shrink-0" />
+                {reserva.duracionMin} min
+              </span>
+              <span className="flex items-center gap-1">
+                <Users className="size-3.5 shrink-0" />
+                {reserva.jugadoresConfirmados} jugadores confirmados
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => setConfirmOpen(true)}
+            className="text-xs bg-red-500 hover:bg-red-600 active:bg-red-700 px-3 py-1.5 rounded-full flex items-center gap-1.5 text-white font-semibold transition shrink-0 shadow-[0_0_12px_rgba(239,68,68,0.5)] hover:shadow-[0_0_16px_rgba(239,68,68,0.7)]"
+          >
+            Cancelar reserva
+          </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Button variant="outline" className="rounded-full px-5" onClick={() => setConfirmOpen(true)}>
-          Cancelar reserva
-        </Button>
-      </div>
-
-      <Dialog open={confirmOpen} onOpenChange={(open) => !cancelando && setConfirmOpen(open)}>
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Cancelar reserva</DialogTitle>
             <DialogDescription>
-              ¿Seguro que querés cancelar tu reserva del {reserva.fecha} a las {reserva.hora}?
-              Si el lobby ya está confirmado y faltan menos de 12 horas, podrías recibir una penalización.
+              Esta acción cancela tu reserva del {reserva.fecha} a las {reserva.hora} en {reserva.cancha}. No se puede deshacer.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={cancelando}>
               Volver
             </Button>
-            <Button variant="destructive" onClick={() => void handleConfirm()} disabled={cancelando}>
-              {cancelando && <Loader2 className="size-4 animate-spin mr-1" />}
-              Confirmar cancelación
+            <Button variant="destructive" onClick={handleCancelar} disabled={cancelando}>
+              {cancelando && <Loader2 className="size-4 animate-spin" />}
+              Cancelar reserva
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -19,17 +19,17 @@ export async function getUsuarioActual() {
   });
 }
 
-export async function getRolUsuario(clerkId: string): Promise<Rol | null> {
+export async function getRolUsuario(clerkId: string): Promise<Rol[] | null> {
   const usuario = await db.usuario.findUnique({
     where: { id_usuario: clerkId },
     include: { jugador: true, empleado: true, admin: true },
   });
-
+  const roles: Rol[] = [];
   if (!usuario) return null;
-  if (usuario.admin) return "admin";
-  if (usuario.empleado) return "empleado";
-  if (usuario.jugador) return "jugador";
-  return null;
+  if (usuario.admin) roles.push("admin");
+  if (usuario.empleado) roles.push("empleado");
+  if (usuario.jugador) roles.push("jugador");
+  return roles ?? null;
 }
 
 export async function requireAuth() {
@@ -52,8 +52,8 @@ export async function requireRol(...roles: Rol[]) {
     };
   }
 
-  const rol = await getRolUsuario(userId);
-  if (!rol || !roles.includes(rol)) {
+  const rolesUsuario = await getRolUsuario(userId);
+  if (!rolesUsuario || rolesUsuario.length === 0 || !roles.some(rol => rolesUsuario.includes(rol))) {
     return {
       userId: null,
       response: NextResponse.json(fail("Sin permisos"), { status: 403 }),

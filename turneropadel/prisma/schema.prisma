@@ -174,8 +174,8 @@ model BloqueoHorario {
 
 model Lobby {
   id_lobby   Int    @id @default(autoincrement())
-  id_turno   Int    @unique
-  turno      Turno  @relation(fields: [id_turno], references: [id_turno])
+  id_turno   Int?    @unique
+  turno      Turno?  @relation(fields: [id_turno], references: [id_turno])
 
   id_creador String
   creador    Jugador @relation("CreadorLobby", fields: [id_creador], references: [id_usuario])
