@@ -81,7 +81,7 @@ export function MapaComplejo({ idCancha }: Props) {
   const posicion: [number, number] = [ubicacion.latitud, ubicacion.longitud];
 
   return (
-    <div className="w-full overflow-hidden rounded-xl">
+    <div className="w-full overflow-hidden rounded-xl" style={{ isolation: "isolate" }}>
       <MapContainer
         center={posicion}
         zoom={15}
