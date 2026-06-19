@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { MisPartidosList } from "@/components/partidos/MisPartidosList";
@@ -86,7 +86,7 @@ function toReservaPartido(reserva: ReservaWithRelations): PartidoReserva {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function MisPartidosPage() {
+function MisPartidosContent() {
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const requestedIdParam = searchParams.get("id");
@@ -97,8 +97,6 @@ export default function MisPartidosPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [cancelando, setCancelando] = useState(false);
-
 
   const {
     lobby: lobbyDetalle,
@@ -271,5 +269,13 @@ export default function MisPartidosPage() {
         </Sheet>
       )}
     </AppShell>
+  );
+}
+
+export default function MisPartidosPage() {
+  return (
+    <Suspense fallback={<PanelSkeleton />}>
+      <MisPartidosContent />
+    </Suspense>
   );
 }
