@@ -15,6 +15,7 @@ import { turnoRepository } from "@/lib/repositories/turno.repository";
 import type { TurnoRepository } from "@/lib/repositories/turno.repository";
 import { ServiceError } from "@/lib/services/service-error";
 import { fromZonedTime } from "date-fns-tz";
+import { emitir } from "@/lib/events";
 
 const TIMEZONE = "America/Argentina/Buenos_Aires";
 const TURNOS_OCUPADOS = ["Reservado", "EnCurso", "Finalizado"];
@@ -242,6 +243,8 @@ export class ReservaService {
     }
 
     try {
+      emitir("reserva.cancelada", { id_reserva });
+
       await this.repository.delete(id_reserva);
     } catch (error) {
       if (isKnownPrismaError(error, "P2003")) {

@@ -174,6 +174,8 @@ export async function actualizarEstadoLobby(
       throw new Error("El lobby ya fue cancelado");
     }
 
+    const oldTurno = lobby.id_turno ?? -1;
+
     const updated = await db.$transaction(async (tx) => {
           if (estado_lobby === "Cancelado" && lobby.id_turno !== null) {
             await repo.liberarTurno(tx, lobby.id_turno);
@@ -184,7 +186,7 @@ export async function actualizarEstadoLobby(
         });
 
     if (estado_lobby === "Cancelado" && lobby.id_reserva) {
-      emitir("lobby.cancelado", { id_reserva: lobby.id_reserva });
+      emitir("lobby.cancelado", { id_reserva: lobby.id_reserva, id_turno: oldTurno });
     }
 
     return ok(updated);
@@ -301,6 +303,8 @@ export async function expulsarJugador(
   const { id_lobby, id_jugador, id_organizador } = input;
 
   try {
+    let reservaIdToEmit: number | null = null;
+
     await db.$transaction(async (tx) => {
       const lobby = await repo.findLobbyParaValidacion(tx, id_lobby);
       assertLobbyExiste(lobby);
@@ -314,10 +318,16 @@ export async function expulsarJugador(
       const inscripcion = await repo.findInscripcion(tx, id_lobby, id_jugador);
       if (!inscripcion) throw new Error("El jugador no está en este lobby");
 
+      reservaIdToEmit = lobby.id_reserva ?? null;
+
       await repo.deleteInscripcion(tx, id_lobby, id_jugador);
       await repo.incrementarFaltantes(tx, id_lobby);
       await repo.cancelarSolicitudAceptada(tx, id_lobby, id_jugador);
     });
+
+    if (reservaIdToEmit !== null) {
+      emitir("jugador.expulsado", { id_reserva: reservaIdToEmit, id_jugador });
+    }
 
     return ok({ expulsado: true });
   } catch (e) {

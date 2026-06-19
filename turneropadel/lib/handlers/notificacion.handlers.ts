@@ -7,6 +7,7 @@ import { usuarioRepository } from "@/lib/repositories/usuario.repository";
 import { jugadorRepository } from "../repositories/jugador.repository";
 import { findLobbyById } from "@/lib/repositories/lobby.repository";
 import { db } from "@/lib/db";
+import { turnoRepository } from "../repositories/turno.repository";
 
 const globalForNotificacionHandlers = globalThis as unknown as {
   notificacionHandlersInitialized?: boolean;
@@ -57,10 +58,14 @@ export function registrarHandlersNotificacion() {
   });
 
   // LOBBY CANCELADO
-  escuchar("lobby.cancelado", async ({ id_reserva }) => {
+  escuchar("lobby.cancelado", async ({ id_reserva, id_turno }) => {
     try {
+      if(id_turno === -1){
+        throw new Error("datos incompletos");
+      }
       const lobby = await reservaRepository.findLobbyByReservaId(id_reserva);
-      if (!lobby || !lobby.turno) {
+      const turno = await turnoRepository.findById(id_turno);
+      if (!lobby || !turno) {
         throw new Error("datos incompletos");
       }
       await notificacionRepository.crearVarias(
@@ -70,8 +75,8 @@ export function registrarHandlersNotificacion() {
         })),
       );
       const fechaYHora = combinarFechaYHora(
-        lobby.turno.fecha,
-        lobby.turno.hora,
+        turno.fecha,
+        turno.hora,
       );
       //llamada a servicio de notificacion mail
       for (const integrante of lobby.jugadores) {
@@ -80,7 +85,7 @@ export function registrarHandlersNotificacion() {
           {
             nombreJugador: integrante.jugador.usuario.nombre,
             fechaReserva: fechaYHora,
-            nombreCancha: lobby.turno.cancha.nro_cancha,
+            nombreCancha: turno.id_cancha,
           },
         );
       }

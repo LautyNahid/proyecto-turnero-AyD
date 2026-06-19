@@ -21,7 +21,9 @@ const labels: Record<TipoNotificacion, string> = {
   SolicitudRechazada: "Tu solicitud fue rechazada",
   SolicitudAceptada: "Tu solicitud fue aceptada",
   JugadorExpulsado: "Fuiste expulsado del lobby",
-  CancelacionLobby: "Un lobby fue cancelado",
+  CancelacionLobby: "Tu lobby fue cancelado",
+  ReservaConfirmada: "Reserva confirmada",
+  ReservaCancelada: "Reserva cancelada"
 };
 
 export function NotificationsDropdown() {

@@ -11,7 +11,7 @@ type EventosApp = {
   "turno.recordatorio": { id_reserva: number };
   "turno.finalizado": { id_reserva: number };
   "jugador.expulsado": { id_reserva: number; id_jugador: string };
-  "lobby.cancelado": { id_reserva: number };
+  "lobby.cancelado": { id_reserva: number; id_turno: number };
 };
 
 type NombreEvento = keyof EventosApp;
