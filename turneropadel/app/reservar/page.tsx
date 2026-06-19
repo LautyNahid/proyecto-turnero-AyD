@@ -96,7 +96,7 @@ function addHour(h: string) {
 }
 
 function calcularPrecioEstimado(precioBaseCancha: number | null, hora: string) {
-  if (precioBaseCancha === null) return null;
+  if (precioBaseCancha === null) return 0;
   const esPico = hora >= HORA_INICIO_RECARGO;
   return esPico ? Math.round(precioBaseCancha * RECARGO_HORARIO_PICO * 100) / 100 : precioBaseCancha;
 }
@@ -203,7 +203,7 @@ export default function Reservar() {
       turno,
       fecha: selectedDate.key,
       hora,
-      precio: precioEstimado ?? 0,
+      precio: precioEstimado,
     });
   }
 
@@ -242,51 +242,51 @@ export default function Reservar() {
   }
 
   async function handleCreateLobby() {
-  if (!selected) return;
+    if (!selected) return;
 
-  setCreatingLobby(true);
-  setError(null);
+    setCreatingLobby(true);
+    setError(null);
 
-  try {
-    const response = await fetch("/api/lobby", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...(selected.turno ? { id_turno: selected.turno.id_turno } : {}),
-        id_cancha: selected.cancha.id_cancha,
-        fecha: selected.fecha,
-        hora: selected.hora,
-        jugadores_faltantes: JugadoresFaltantesDefault,
-        precio: selected.precio
-      }),
-    });
+    try {
+      const response = await fetch("/api/lobby", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...(selected.turno ? { id_turno: selected.turno.id_turno } : {}),
+          id_cancha: selected.cancha.id_cancha,
+          fecha: selected.fecha,
+          hora: selected.hora,
+          jugadores_faltantes: JugadoresFaltantesDefault,
+          precio: selected.precio
+        }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.error ?? "No se pudo crear el lobby");
+      if (!response.ok) {
+        throw new Error(data.error ?? "No se pudo crear el lobby");
+      }
+
+      await loadSchedule();
+
+      setSelected(null);
+      setLobbyCreated(true);
+      setLobbyOpen(false);
+
+      // Opcional:
+      // router.push(`/lobby/${data.id}`);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo crear el lobby"
+      );
+    } finally {
+      setCreatingLobby(false);
     }
-
-    await loadSchedule();
-
-    setSelected(null);
-    setLobbyCreated(true);
-    setLobbyOpen(false);
-
-    // Opcional:
-    // router.push(`/lobby/${data.id}`);
-  } catch (err) {
-    setError(
-      err instanceof Error
-        ? err.message
-        : "No se pudo crear el lobby"
-    );
-  } finally {
-    setCreatingLobby(false);
   }
-}
 
   return (
     <AppShell title="Reservar turno" subtitle="Elegi cancha, dia y horario">
@@ -467,12 +467,6 @@ export default function Reservar() {
                   <Row label="Por jugador (x4)" value={`$${formatPrice(selected.precio / 4)}`} highlight />
                 </div>
 
-                {selected.cancha.precio === null && !selected.turno && (
-                  <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
-                    Esta cancha no tiene un precio base configurado. No vas a poder confirmar la reserva hasta que el admin lo configure.
-                  </div>
-                )}
-
                 <div className="mt-5 p-3 rounded-xl bg-accent/40 text-xs text-foreground/80 flex gap-2">
                   <Info className="size-4 shrink-0 mt-0.5 text-primary" />
                   La reserva queda asociada a tu usuario y el turno pasa a Reservado.
@@ -499,10 +493,7 @@ export default function Reservar() {
                   </div>
                 ) : (
                   <button
-                    disabled={
-                      (selected.turno ? OCCUPIED_STATES.includes(selected.turno.estado_turno) : false) ||
-                      (!selected.turno && selected.cancha.precio === null)
-                    }
+                    disabled={selected.turno ? OCCUPIED_STATES.includes(selected.turno.estado_turno) : false}
                     onClick={() => setConfirmOpen(true)}
                     className="mt-2 block w-full text-center bg-secondary text-secondary-foreground font-semibold py-3 rounded-xl hover:bg-accent transition disabled:opacity-50"
                   >

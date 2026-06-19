@@ -23,8 +23,8 @@ export async function DELETE(_req: Request, context: RouteContext) {
     const { userId, response } = await requireAuth();
     if (response) return response;
 
-    const rol = await getRolUsuario(userId!);
-    const esAdmin = rol === "admin";
+    const roles = await getRolUsuario(userId!);
+    const esAdmin = roles?.includes("admin") ?? false;
 
     const { id_reserva } = await context.params;
     await reservaService.eliminarReserva(id_reserva, userId!, esAdmin);
