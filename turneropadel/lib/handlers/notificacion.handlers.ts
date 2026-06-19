@@ -5,6 +5,8 @@ import { TipoNotificacion } from "@prisma/client";
 import { NotificacionMailService } from "@/lib/services/notificacionMail.service";
 import { usuarioRepository } from "@/lib/repositories/usuario.repository";
 import { jugadorRepository } from "../repositories/jugador.repository";
+import { findLobbyById } from "@/lib/repositories/lobby.repository";
+import { db } from "@/lib/db";
 
 const globalForNotificacionHandlers = globalThis as unknown as {
   notificacionHandlersInitialized?: boolean;
@@ -88,7 +90,7 @@ export function registrarHandlersNotificacion() {
   });
 
   //SOLICITUD ACEPTADA
-  escuchar("solicitud.aceptada", async ({ id_reserva, id_jugador }) => {
+  escuchar("solicitud.aceptada", async ({ id_lobby, id_jugador }) => {
     try {
       await notificacionRepository.crear({
         id_destinatario: id_jugador,
@@ -96,21 +98,21 @@ export function registrarHandlersNotificacion() {
       });
 
       //llamada a servicio de notificacion mail
-      const reserva = await reservaRepository.findById(id_reserva);
+      const lobby = await findLobbyById(db, id_lobby);
       const jugador = await jugadorRepository.findByIdConUsuario(id_jugador);
-      if (!reserva || !jugador) {
+      if (!lobby || !lobby.turno || !jugador) {
         throw new Error("datos incompletos");
       }
       const fechaYHora = combinarFechaYHora(
-        reserva.turno.fecha,
-        reserva.turno.hora,
+        lobby.turno.fecha,
+        lobby.turno.hora,
       );
       await NotificacionMailService.notificarSolicitudAceptada(
         jugador.usuario.correo_electronico,
         {
           nombreJugador: jugador.usuario.nombre,
           fechaReserva: fechaYHora,
-          nombreCancha: reserva.turno.cancha.nro_cancha,
+          nombreCancha: lobby.turno.cancha.nro_cancha,
         },
       );
     } catch (error) {
@@ -119,7 +121,7 @@ export function registrarHandlersNotificacion() {
   });
 
   // SOLICITUD RECHAZADA
-  escuchar("solicitud.rechazada", async ({ id_reserva, id_jugador }) => {
+  escuchar("solicitud.rechazada", async ({ id_lobby, id_jugador }) => {
     try {
       await notificacionRepository.crear({
         id_destinatario: id_jugador,
@@ -127,25 +129,25 @@ export function registrarHandlersNotificacion() {
       });
 
       //llamada a servicio de notificacion mail
-      const reserva = await reservaRepository.findById(id_reserva);
+      const lobby = await findLobbyById(db, id_lobby);
       const jugador = await jugadorRepository.findByIdConUsuario(id_jugador);
-      if (!reserva || !jugador) {
+      if (!lobby || !lobby.turno || !jugador) {
         throw new Error("datos incompletos");
       }
       const fechaYHora = combinarFechaYHora(
-        reserva.turno.fecha,
-        reserva.turno.hora,
+        lobby.turno.fecha,
+        lobby.turno.hora,
       );
-      await NotificacionMailService.notificarSolicitudRechazada(
+      await NotificacionMailService.notificarSolicitudAceptada(
         jugador.usuario.correo_electronico,
         {
           nombreJugador: jugador.usuario.nombre,
           fechaReserva: fechaYHora,
-          nombreCancha: reserva.turno.cancha.nro_cancha,
+          nombreCancha: lobby.turno.cancha.nro_cancha,
         },
       );
     } catch (error) {
-      console.error("[handler] solicitud.rechazada error:", error);
+      console.error("[handler] solicitud.aceptada error:", error);
     }
   });
 

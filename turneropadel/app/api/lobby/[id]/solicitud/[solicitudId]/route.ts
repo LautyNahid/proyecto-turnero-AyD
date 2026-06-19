@@ -33,10 +33,13 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
   const { accion } = body as { accion?: unknown };
 
-  if (typeof accion !== "string" || !ACCIONES_VALIDAS.includes(accion as Accion)) {
+  if (
+    typeof accion !== "string" ||
+    !ACCIONES_VALIDAS.includes(accion as Accion)
+  ) {
     return NextResponse.json(
       fail(`accion debe ser: ${ACCIONES_VALIDAS.join(" | ")}`),
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -48,11 +51,16 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
   });
 
   if (result.error) {
-    const status = result.error === "Lobby no encontrado" ? 404
-      : result.error === "Solicitud no encontrada" ? 404
-      : result.error === "Sin permisos" ? 403
-      : ERRORES_422.includes(result.error) ? 422
-      : 500;
+    const status =
+      result.error === "Lobby no encontrado"
+        ? 404
+        : result.error === "Solicitud no encontrada"
+          ? 404
+          : result.error === "Sin permisos"
+            ? 403
+            : ERRORES_422.includes(result.error)
+              ? 422
+              : 500;
     return NextResponse.json(result, { status });
   }
 
