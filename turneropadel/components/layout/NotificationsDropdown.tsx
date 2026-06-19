@@ -3,8 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
-import { EstadoNotificacion, TipoNotificacion } from "@prisma/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  EstadoNotificacion,
+  TIPO_NOTIFICACION_LABELS,
+  type TipoNotificacion,
+} from "@/lib/types/notificacion";
 
 interface Notificacion {
   id_notificacion: number;
@@ -13,18 +17,6 @@ interface Notificacion {
   creada_en: string;
   enviada_en: string | null;
 }
-
-const labels: Record<TipoNotificacion, string> = {
-  LobbyConfirmado: "Tu lobby fue confirmado",
-  RecordatorioTurno: "Recordatorio de turno",
-  TurnoFinalizado: "Turno finalizado",
-  SolicitudRechazada: "Tu solicitud fue rechazada",
-  SolicitudAceptada: "Tu solicitud fue aceptada",
-  JugadorExpulsado: "Fuiste expulsado del lobby",
-  CancelacionLobby: "Tu lobby fue cancelado",
-  ReservaConfirmada: "Reserva confirmada",
-  ReservaCancelada: "Reserva cancelada"
-};
 
 export function NotificationsDropdown() {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
@@ -108,7 +100,9 @@ export function NotificationsDropdown() {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold">{labels[notificacion.tipo]}</div>
+                      <div className="truncate text-sm font-semibold">
+                        {TIPO_NOTIFICACION_LABELS[notificacion.tipo]}
+                      </div>
                       <div className="text-xs text-muted-foreground">
                         {formatFecha(notificacion.creada_en)}
                       </div>

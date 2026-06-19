@@ -8,7 +8,17 @@ import { StatCard } from "@/components/ui/StatCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { LobbyCard, LobbyCardSkeleton } from "@/components/partidos/LobbyCard";
 import { LobbySheet } from "@/components/partidos/LobbySheet";
-import { CalendarRange, MapPin, Users2, Clock, ChevronRight, Trophy, Flame, Star, MessageCircle } from "lucide-react";
+import {
+  CalendarRange,
+  MapPin,
+  Users2,
+  Clock,
+  ChevronRight,
+  Trophy,
+  Flame,
+  Star,
+  MessageCircle,
+} from "lucide-react";
 import { usePerfil } from "@/hooks/usePerfil";
 import { useAgenda } from "@/hooks/useAgenda";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
@@ -19,14 +29,18 @@ import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
 
 export default function Home() {
   const { user, isLoaded } = useUser();
-  const idUsuario = isLoaded ? user?.id ?? null : null;
+  const idUsuario = isLoaded ? (user?.id ?? null) : null;
   const { perfil } = usePerfil(idUsuario);
   const { agenda } = useAgenda(idUsuario);
   const [now] = useState(() => Date.now());
   const [lobbies, setLobbies] = useState<LobbyConRelaciones[]>([]);
   const [loadingLobbies, setLoadingLobbies] = useState(true);
-  const [selectedLobby, setSelectedLobby] = useState<LobbyConRelaciones | null>(null);
-  const proximos = agenda.filter((reserva) => reserva.turno.estado_turno !== "Finalizado");
+  const [selectedLobby, setSelectedLobby] = useState<LobbyConRelaciones | null>(
+    null,
+  );
+  const proximos = agenda.filter(
+    (reserva) => reserva.turno.estado_turno !== "Finalizado",
+  );
   const proximosOrdenados = proximos
     .map((reserva) => ({
       reserva,
@@ -35,8 +49,12 @@ export default function Home() {
     .filter(({ fechaTurno }) => fechaTurno.getTime() >= now)
     .sort((a, b) => a.fechaTurno.getTime() - b.fechaTurno.getTime())
     .slice(0, 2);
-  const valoracion = perfil ? Number(perfil.reputacion_promedio).toFixed(1) : "-";
-  const cantidadValoraciones = perfil ? String(perfil.evaluaciones_recibidas) : "-";
+  const valoracion = perfil
+    ? Number(perfil.reputacion_promedio).toFixed(1)
+    : "-";
+  const cantidadValoraciones = perfil
+    ? String(perfil.evaluaciones_recibidas)
+    : "-";
 
   useEffect(() => {
     async function fetchLobbies() {
@@ -54,8 +72,10 @@ export default function Home() {
   }, []);
 
   return (
-    <AppShell title="Hola, Martín" subtitle="¿Listo para jugar tu próximo partido?">
-
+    <AppShell
+      title="Hola, Martín"
+      subtitle="¿Listo para jugar tu próximo partido?"
+    >
       {/* ── Hero + Stats — no tocar ─────────────────────────────────────── */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <div
@@ -63,33 +83,55 @@ export default function Home() {
           style={{ background: "var(--gradient-court)" }}
         >
           <div className="absolute -right-10 -top-10 size-48 rounded-full bg-lime/20 blur-2xl" />
-          <div className="absolute right-8 top-8 hidden md:flex items-center gap-1.5 text-xs bg-white/10 px-3 py-1.5 rounded-full backdrop-blur">
-            <Flame className="size-3.5 text-lime" /> Racha de 4 partidos
-          </div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight max-w-md">
-            Reservá tu cancha en <span className="text-lime">menos de 30 segundos</span>
+            Reservá tu cancha en{" "}
+            <span className="text-lime">menos de 30 segundos</span>
           </h2>
           <p className="mt-2 text-primary-foreground/70 max-w-md text-sm">
             Encontrá horarios disponibles, armá partido y reservá tu lugar.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/reservar" className="inline-flex items-center gap-2 bg-lime text-lime-foreground px-5 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition">
+            <Link
+              href="/reservar"
+              className="inline-flex items-center gap-2 bg-lime text-lime-foreground px-5 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition"
+            >
               <CalendarRange className="size-4" /> Reservar turno
             </Link>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <StatCard icon={Trophy} label="Partidos jugados" value={String(perfil?.partidos_jugados ?? "-")} tone="primary" />
-          <StatCard icon={MessageCircle} label="Valoraciones" value={cantidadValoraciones} />
-          <StatCard icon={Clock} label="Próximos" value={String(proximos.length)} />
-          <StatCard icon={Star} label="Valoración" value={valoracion} tone="lime" />
+          <StatCard
+            icon={Trophy}
+            label="Partidos jugados"
+            value={String(perfil?.partidos_jugados ?? "-")}
+            tone="primary"
+          />
+          <StatCard
+            icon={MessageCircle}
+            label="Valoraciones"
+            value={cantidadValoraciones}
+          />
+          <StatCard
+            icon={Clock}
+            label="Próximos"
+            value={String(proximos.length)}
+          />
+          <StatCard
+            icon={Star}
+            label="Valoración"
+            value={valoracion}
+            tone="lime"
+          />
         </div>
       </section>
 
       {/* ── Próximos turnos — no tocar (Par 1) ─────────────────────────── */}
       <section className="mb-8">
-        <SectionHeader title="Próximos turnos" action={{ label: "Ver todos", href: "/perfil" }} />
+        <SectionHeader
+          title="Próximos turnos"
+          action={{ label: "Ver todos", href: "/perfil" }}
+        />
         <div className="grid md:grid-cols-2 gap-4">
           {proximosOrdenados.length === 0 ? (
             <div className="md:col-span-2 bg-card rounded-2xl p-5 shadow-soft border border-border text-center text-sm text-muted-foreground">
@@ -109,7 +151,9 @@ export default function Home() {
                   <div className="text-xl font-bold">{reserva.turno.hora}</div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold truncate">Cancha {reserva.turno.cancha.nro_cancha}</div>
+                  <div className="font-semibold truncate">
+                    Cancha {reserva.turno.cancha.nro_cancha}
+                  </div>
                   <div className="text-xs text-muted-foreground flex items-center gap-1">
                     <MapPin className="size-3" /> {formatTurnoDate(fechaTurno)}
                   </div>
