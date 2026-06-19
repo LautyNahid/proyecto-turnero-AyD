@@ -15,11 +15,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { useClima } from "@/hooks/useClima";
 import dynamic from "next/dynamic";
+import { JugadoresFaltantesDefault } from "@/lib/types";
 
 type Cancha = {
   id_cancha: number;
   nro_cancha: number;
   activa: boolean;
+  precio: number | null;
 };
 
 type Turno = {
@@ -29,6 +31,7 @@ type Turno = {
   hora: string;
   precio: string | number;
   estado_turno: "Disponible" | "Reservado" | "EnCurso" | "Finalizado";
+  bloqueos: { id_bloqueo: number; motivo: string }[];
 };
 
 type SelectedTurno = {
@@ -40,10 +43,12 @@ type SelectedTurno = {
 };
 
 const DEFAULT_HOURS = ["08:00", "09:30", "11:00", "12:30", "14:00", "15:30", "17:00", "18:30", "20:00", "21:30"];
-const DEFAULT_PRICE = 12000;
 const OCCUPIED_STATES = ["Reservado", "EnCurso", "Finalizado"];
 
 const dayNames = ["DOM", "LUN", "MAR", "MIE", "JUE", "VIE", "SAB"];
+
+const HORA_INICIO_RECARGO = "18:00";
+const RECARGO_HORARIO_PICO = 1.10;
 
 const MapaComplejo = dynamic(
   () => import("@/components/mapa/MapaComplejo").then((mod) => mod.MapaComplejo),
@@ -90,6 +95,12 @@ function addHour(h: string) {
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
+function calcularPrecioEstimado(precioBaseCancha: number | null, hora: string) {
+  if (precioBaseCancha === null) return 0;
+  const esPico = hora >= HORA_INICIO_RECARGO;
+  return esPico ? Math.round(precioBaseCancha * RECARGO_HORARIO_PICO * 100) / 100 : precioBaseCancha;
+}
+
 function formatPrice(value: string | number) {
   return Number(value).toLocaleString("es-AR", {
     maximumFractionDigits: 0,
@@ -106,6 +117,9 @@ export default function Reservar() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [reserving, setReserving] = useState(false);
+  const [lobbyOpen, setLobbyOpen] = useState(false);
+  const [creatingLobby, setCreatingLobby] = useState(false);
+  const [lobbyCreated, setLobbyCreated] = useState(false);
 
   const days = useMemo(() => buildDays(), []);
   const selectedDate = days[day];
@@ -180,12 +194,16 @@ export default function Reservar() {
 
   function handleSelectSlot(cancha: Cancha, turno: Turno | undefined, hora: string) {
     setConfirmed(false);
+    const precioEstimado = turno
+      ? Number(turno.precio)
+      : calcularPrecioEstimado(cancha.precio, hora);
+
     setSelected({
       cancha,
       turno,
       fecha: selectedDate.key,
       hora,
-      precio: turno ? Number(turno.precio) : DEFAULT_PRICE,
+      precio: precioEstimado,
     });
   }
 
@@ -204,7 +222,6 @@ export default function Reservar() {
           id_cancha: selected.cancha.id_cancha,
           fecha: selected.fecha,
           hora: selected.hora,
-          precio: selected.precio,
         }),
       });
       const data = await response.json();
@@ -221,6 +238,53 @@ export default function Reservar() {
       setError(err instanceof Error ? err.message : "No se pudo confirmar la reserva");
     } finally {
       setReserving(false);
+    }
+  }
+
+  async function handleCreateLobby() {
+    if (!selected) return;
+
+    setCreatingLobby(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/lobby", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...(selected.turno ? { id_turno: selected.turno.id_turno } : {}),
+          id_cancha: selected.cancha.id_cancha,
+          fecha: selected.fecha,
+          hora: selected.hora,
+          jugadores_faltantes: JugadoresFaltantesDefault,
+          precio: selected.precio
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "No se pudo crear el lobby");
+      }
+
+      await loadSchedule();
+
+      setSelected(null);
+      setLobbyCreated(true);
+      setLobbyOpen(false);
+
+      // Opcional:
+      // router.push(`/lobby/${data.id}`);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo crear el lobby"
+      );
+    } finally {
+      setCreatingLobby(false);
     }
   }
 
@@ -248,6 +312,12 @@ export default function Reservar() {
           {confirmed && (
             <div className="mb-4 rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm font-semibold text-success">
               Reserva confirmada. 
+            </div>
+          )}
+
+          {lobbyCreated && (
+            <div className="mb-4 rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm font-semibold text-success">
+              Lobby creado correctamente.
             </div>
           )}
 
@@ -304,16 +374,21 @@ export default function Reservar() {
                         </td>
                         {hours.map((h) => {
                           const turno = turnosByCanchaAndHour.get(`${cancha.id_cancha}-${h}`);
-                          const isOccupied = turno ? OCCUPIED_STATES.includes(turno.estado_turno) : false;
+                          const isOccupied = turno
+                            ? OCCUPIED_STATES.includes(turno.estado_turno) || turno.bloqueos.length > 0
+                            : false;
                           const isSelected =
                             selected?.cancha.id_cancha === cancha.id_cancha &&
                             selected?.fecha === selectedDate.key &&
                             selected?.hora === h;
                           const isAvailable = !isOccupied;
+                          const isBlocked = turno ? turno.bloqueos.length > 0 : false;
                           const cls = isSelected
                             ? "bg-lime text-lime-foreground ring-2 ring-lime"
                             : isAvailable
                             ? "bg-success/15 text-success hover:bg-success/25"
+                            : isBlocked
+                            ? "bg-destructive/15 text-destructive cursor-not-allowed"
                             : turno
                             ? "bg-muted text-muted-foreground/60 cursor-not-allowed"
                             : "bg-destructive/10 text-destructive cursor-not-allowed line-through";
@@ -325,7 +400,13 @@ export default function Reservar() {
                                 onClick={() => handleSelectSlot(cancha, turno, h)}
                                 className={`w-full h-10 rounded-lg text-xs font-semibold transition ${cls}`}
                               >
-                                {isSelected ? "OK" : isAvailable ? "Libre" : turno?.estado_turno ?? "-"}
+                                {isSelected
+                                  ? "OK"
+                                  : isAvailable
+                                  ? "Libre"
+                                  : turno && turno.bloqueos.length > 0
+                                  ? "Bloqueado"
+                                  : turno?.estado_turno ?? "-"}
                               </button>
                             </td>
                           );
@@ -337,10 +418,11 @@ export default function Reservar() {
               </table>
             </div>
             <div className="border-t border-border p-3 flex items-center gap-4 text-xs text-muted-foreground">
-              <Legend color="bg-success/40" label="Libre" />
-              <Legend color="bg-muted" label="Reservado" />
-              <Legend color="bg-lime" label="Seleccionado" />
-            </div>
+            <Legend color="bg-success/40" label="Libre" />
+            <Legend color="bg-muted" label="Reservado" />
+            <Legend color="bg-destructive/30" label="Bloqueado" />
+            <Legend color="bg-lime" label="Seleccionado" />
+          </div>
           </div>
 
           {activeCanchas.length > 0 && (
@@ -390,12 +472,20 @@ export default function Reservar() {
                   La reserva queda asociada a tu usuario y el turno pasa a Reservado.
                 </div>
 
-                <Link
-                  href="/lobby"
-                  className="mt-5 block w-full text-center bg-primary text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 transition"
-                >
-                  Confirmar y armar partido
-                </Link>
+                {lobbyCreated ? (
+                  <div className="mt-5 w-full flex items-center justify-center gap-2 bg-success/15 text-success font-semibold py-3 rounded-xl text-sm">
+                    <Check className="size-4" />
+                    Lobby creado
+                  </div>
+                ) : (
+                  <button
+                    disabled={selected.turno ? OCCUPIED_STATES.includes(selected.turno.estado_turno) : false}
+                    onClick={() => setLobbyOpen(true)}
+                    className="mt-5 block w-full text-center bg-primary text-primary-foreground font-semibold py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
+                  >
+                    Confirmar y armar partido
+                  </button>
+                )}
 
                 {confirmed ? (
                   <div className="mt-2 w-full flex items-center justify-center gap-2 bg-success/15 text-success font-semibold py-3 rounded-xl text-sm">
@@ -442,6 +532,31 @@ export default function Reservar() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={lobbyOpen} onOpenChange={setLobbyOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar creación del lobby</DialogTitle>
+            <DialogDescription>
+              Se creará un lobby asociado a este turno para que otros jugadores puedan unirse.
+            </DialogDescription>
+          </DialogHeader>
+          {selected && (
+            <div className="py-2 text-sm text-muted-foreground space-y-1">
+              <div><span className="font-semibold text-foreground">Cancha: </span>{" "} Cancha {selected.cancha.nro_cancha} </div>
+              <div><span className="font-semibold text-foreground">Horario: </span>{" "} {selected.fecha} - {selected.hora} a{" "} {addHour(selected.hora)}</div>
+              <div><span className="font-semibold text-foreground">Precio: </span>{" "} ${formatPrice(selected.precio)}</div></div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLobbyOpen(false)} disabled={creatingLobby}>Cancelar</Button>
+            <Button onClick={handleCreateLobby} disabled={creatingLobby}>
+              {creatingLobby && (<Loader2 className="size-4 animate-spin" />)}
+              Crear lobby
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </AppShell>
   );
 }

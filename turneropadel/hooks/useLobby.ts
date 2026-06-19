@@ -13,6 +13,7 @@ type UseLobbyReturn = {
   aceptarSolicitud: (id_solicitud: number) => Promise<void>;
   rechazarSolicitud: (id_solicitud: number) => Promise<void>;
   expulsarJugador: (id_jugador: string) => Promise<void>;
+  cancelarLobby: () => Promise<void>;
 };
 
 //  Helpers
@@ -102,6 +103,23 @@ export function useLobby(id_lobby: number): UseLobbyReturn {
     await cargarLobby(lobby.id_lobby);
   }, [lobby, cargarLobby]);
 
+  const cancelarLobby = useCallback(async () => {
+    if (!lobby) return;
+
+    const { error } = await fetchJson(`/api/lobby/${lobby.id_lobby}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado_lobby: "Cancelado" }),
+    });
+
+    if (error) {
+      setError(error);
+      return;
+    }
+
+    await cargarLobby(lobby.id_lobby);
+  }, [lobby, cargarLobby]);
+
   return {
     lobby,
     estado,
@@ -110,5 +128,6 @@ export function useLobby(id_lobby: number): UseLobbyReturn {
     aceptarSolicitud,
     rechazarSolicitud,
     expulsarJugador,
+    cancelarLobby,
   };
 }

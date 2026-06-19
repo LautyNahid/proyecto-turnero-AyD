@@ -5,13 +5,22 @@ import type { Lobby, Solicitud } from "@prisma/client";
 import type { EstadoLobby } from "@prisma/client";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
 import * as repo from "@/lib/repositories/lobby.repository";
+import { confirmarLobby } from "@/lib/services/lobby-reserva.service";
+import { emitir } from "@/lib/events";
+import { fromZonedTime } from "date-fns-tz";
 
 //Types
 
+const TIMEZONE = "America/Argentina/Buenos_Aires";
+
 type CrearLobbyInput = {
-  id_turno: number;
   id_creador: string;
   jugadores_faltantes: number;
+  id_turno?: number;
+  id_cancha?: number;
+  fecha?: string;
+  hora?: string;
+  precio?: number;
 };
 
 type ActualizarEstadoInput = {
@@ -58,6 +67,12 @@ function assertHayCupos(faltantes: number) {
   if (faltantes <= 0) throw new Error("El partido ya está completo");
 }
 
+function assertTurnoVinculado(
+  id_turno: number | null
+): asserts id_turno is number {
+  if (id_turno === null) throw new Error("El lobby no tiene un turno vinculado");
+}
+
 //  Service 
 
 export async function listarLobbies(
@@ -85,7 +100,7 @@ export async function obtenerLobby(
 export async function crearLobby(
   input: CrearLobbyInput
 ): Promise<ApiResponse<Lobby | null>> {
-  const { id_turno, id_creador, jugadores_faltantes } = input;
+  const { id_turno, id_creador, jugadores_faltantes, id_cancha, fecha, hora, precio } = input;
 
   if (jugadores_faltantes < 1 || jugadores_faltantes > 3) {
     return fail("jugadores_faltantes debe ser entre 1 y 3");
@@ -93,14 +108,48 @@ export async function crearLobby(
 
   try {
     const lobby = await db.$transaction(async (tx) => {
-      const turno = await repo.findTurnoParaLobby(tx, id_turno);
+      let targetTurnoId = id_turno;
+
+      if (!targetTurnoId) {
+        if (!id_cancha || !fecha || !hora) {
+          throw new Error("Faltan datos para identificar o crear el turno");
+        }
+
+        const parsedFecha = fromZonedTime(`${fecha}T00:00:00`, TIMEZONE);
+        if (Number.isNaN(parsedFecha.getTime())) throw new Error("Fecha inválida");
+
+        const existing = await repo.findTurnoBySchedule(tx, {
+          id_cancha,
+          fecha: parsedFecha,
+          hora,
+        });
+
+        if (existing) {
+          targetTurnoId = existing.id_turno;
+        } else {
+          const nuevoTurno = await repo.createTurno(tx, {
+            id_cancha,
+            fecha: parsedFecha,
+            hora,
+            precio: precio ?? 12000,
+          });
+          targetTurnoId = nuevoTurno.id_turno;
+        }
+      }
+
+      const turno = await repo.findTurnoParaLobby(tx, targetTurnoId!);
       if (!turno) throw new Error("Turno no encontrado");
       if (turno.estado_turno !== "Disponible")
         throw new Error("El turno no está disponible");
       if (turno.lobby) throw new Error("El turno ya tiene un lobby asociado");
 
-      const nuevo = await repo.createLobby(tx, { id_turno, id_creador, jugadores_faltantes });
+      const nuevo = await repo.createLobby(tx, {
+        id_turno: targetTurnoId!,
+        id_creador,
+        jugadores_faltantes,
+      });
       await repo.createInscripcion(tx, nuevo.id_lobby, id_creador);
+      await repo.lockTurnoParaLobby(tx, targetTurnoId!);
 
       return nuevo;
     });
@@ -121,11 +170,21 @@ export async function actualizarEstadoLobby(
     assertLobbyExiste(lobby);
     assertEsOrganizador(lobby.id_creador, id_solicitante);
 
-    const updated = await db.$transaction((tx) =>
-      repo.updateEstadoLobby(tx, id_lobby, { estado_lobby })
-    );
+    if (estado_lobby === "Cancelado" && lobby.id_turno === null) {
+      throw new Error("El lobby ya fue cancelado");
+    }
+
+    const updated = await db.$transaction(async (tx) => {
+          if (estado_lobby === "Cancelado" && lobby.id_turno !== null) {
+            await repo.liberarTurno(tx, lobby.id_turno);
+            await repo.cancelarTodasLasSolicitudes(tx, id_lobby);
+            await repo.desvincularTurno(tx, id_lobby);
+          }
+          return repo.updateEstadoLobby(tx, id_lobby, { estado_lobby });
+        });
 
     return ok(updated);
+    
   } catch (e) {
     return fail(e instanceof Error ? e.message : "Error al actualizar el estado del lobby");
   }
@@ -187,6 +246,7 @@ export async function responderSolicitud(
       assertLobbyExiste(lobby);
       assertEsOrganizador(lobby.id_creador, id_organizador);
       assertLobbyAbierto(lobby.estado_lobby);
+      assertTurnoVinculado(lobby.id_turno);
 
       const solicitud = await repo.findSolicitudById(tx, id_solicitud);
       if (!solicitud) throw new Error("Solicitud no encontrada");
@@ -197,7 +257,7 @@ export async function responderSolicitud(
 
       if (accion === "rechazar") {
         const actualizada = await repo.updateEstadoSolicitud(tx, id_solicitud, "Rechazada");
-        return { solicitud: actualizada, lobby_confirmado: false };
+        return { solicitud: actualizada, faltantesRestantes: lobby.jugadores_faltantes, id_turno: lobby.id_turno };
       }
 
       assertHayCupos(lobby.jugadores_faltantes);
@@ -205,16 +265,27 @@ export async function responderSolicitud(
       const solicitudActualizada = await repo.updateEstadoSolicitud(tx, id_solicitud, "Aceptada");
       await repo.createInscripcion(tx, id_lobby, solicitud.id_jugador);
 
-      const nuevosFaltantes = lobby.jugadores_faltantes - 1;
-      const lobbyActualizado = await repo.decrementarFaltantes(tx, id_lobby, nuevosFaltantes);
+      const { actualizado, faltantesRestantes } = await repo.decrementarFaltantesAtomico(tx, id_lobby);
 
-      return {
-        solicitud: solicitudActualizada,
-        lobby_confirmado: lobbyActualizado.estado_lobby === "Confirmado",
-      };
+      if (!actualizado) {
+        throw new Error("El partido ya está completo");
+      }
+
+      return { solicitud: solicitudActualizada, faltantesRestantes: faltantesRestantes!, id_turno: lobby.id_turno };
     });
 
-    return ok(resultado);
+    const lobbyCompleto = resultado.faltantesRestantes === 0;
+    let lobby_confirmado = false;
+
+    if (lobbyCompleto) {
+      const confirmacion = await confirmarLobby({ id_lobby, id_turno: resultado.id_turno });
+      if (confirmacion.ok) {
+        emitir("lobby.confirmado", { id_lobby });
+        lobby_confirmado = true;
+      }
+    }
+
+    return ok({ solicitud: resultado.solicitud, lobby_confirmado });
   } catch (e) {
     return fail(e instanceof Error ? e.message : "Error al responder la solicitud");
   }
@@ -230,9 +301,9 @@ export async function expulsarJugador(
       const lobby = await repo.findLobbyParaValidacion(tx, id_lobby);
       assertLobbyExiste(lobby);
       assertEsOrganizador(lobby.id_creador, id_organizador);
+      
+      assertLobbyAbierto(lobby.estado_lobby);
 
-      if (lobby.estado_lobby === "Finalizado" || lobby.estado_lobby === "Cancelado")
-        throw new Error("No se puede expulsar jugadores de un lobby finalizado o cancelado");
       if (lobby.id_creador === id_jugador)
         throw new Error("El organizador no puede expulsarse a sí mismo");
 

@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { MapPin, Clock, Loader2 } from "lucide-react";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
+import { parseLocalDate } from "@/lib/utils";
 
 interface LobbySheetProps {
   lobby: LobbyConRelaciones | null;
@@ -54,11 +55,15 @@ export function LobbySheet({ lobby, open, onClose }: LobbySheetProps) {
 
   if (!lobby) return null;
 
-  const fecha = new Date(lobby.turno.fecha).toLocaleDateString("es-AR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+  const fecha = lobby.turno
+    ? parseLocalDate(lobby.turno.fecha).toLocaleDateString("es-AR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      })
+    : "Turno no asignado";
+  const hora = lobby.turno?.hora ?? "—";
+  const cancha = lobby.turno?.cancha?.nro_cancha ?? "—";
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -77,12 +82,12 @@ export function LobbySheet({ lobby, open, onClose }: LobbySheetProps) {
               Partido
             </div>
             <div className="mt-1 text-2xl font-bold capitalize">
-              {fecha} · {lobby.turno.hora}
+              {fecha} · {hora}
             </div>
             <div className="mt-2 flex flex-wrap gap-3 text-sm text-primary-foreground/80">
               <span className="flex items-center gap-1">
                 <MapPin className="size-3.5" />
-                Cancha {lobby.turno.cancha.nro_cancha}
+                Cancha {cancha}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="size-3.5" />

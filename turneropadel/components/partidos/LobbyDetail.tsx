@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { MapPin, Clock, Cloud, Share2, Check, UserMinus } from "lucide-react";
+import { MapPin, Clock, MessageSquare , Share2, Check, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LobbyChat } from "./LobbyChat";
+
 import {
   Dialog,
   DialogContent,
@@ -16,6 +18,7 @@ import { PlayerSlot } from "./PlayerSlot";
 import { SolicitudItem } from "./SolicitudItem";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
 import type { JugadorSlot } from "@/lib/types";
+import { parseLocalDate } from "@/lib/utils";
 
 // Types 
 
@@ -24,6 +27,7 @@ interface LobbyDetailProps {
   onAceptarSolicitud: (id_solicitud: number) => Promise<void>;
   onRechazarSolicitud: (id_solicitud: number) => Promise<void>;
   onExpulsarJugador: (id_jugador: string) => Promise<void>;
+  onCancelarLobby: () => Promise<void>;
 }
 
 
@@ -61,6 +65,7 @@ export function LobbyDetail({
   onAceptarSolicitud,
   onRechazarSolicitud,
   onExpulsarJugador,
+  onCancelarLobby,
 }: LobbyDetailProps) {
   const { user } = useUser();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -72,11 +77,18 @@ export function LobbyDetail({
   );
   const jugadoresConfirmados = lobby.jugadores.length;
   const lugaresVacios = lobby.jugadores_faltantes;
-  const fecha = new Date(lobby.turno.fecha).toLocaleDateString("es-AR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+  const tieneTurno = Boolean(lobby.turno);
+  const fecha = tieneTurno
+    ? parseLocalDate(lobby.turno!.fecha).toLocaleDateString("es-AR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      })
+    : "Turno no asignado";
+  const hora = lobby.turno?.hora ?? "—";
+  const cancha = lobby.turno?.cancha?.nro_cancha ?? "—";
+  const nombreLobby = tieneTurno ? `Cancha ${cancha} · ${hora}` : "Turno no asignado";
+  const [chatOpen, setChatOpen] = useState(false);
 
   async function handleAceptar(id_solicitud: number) {
     setLoadingId(id_solicitud);
@@ -102,11 +114,11 @@ export function LobbyDetail({
             <div className="text-xs uppercase tracking-wider text-primary-foreground/60">
               Próximo partido
             </div>
-            <div className="mt-1 text-3xl font-bold capitalize">{fecha} · {lobby.turno.hora}</div>
+            <div className="mt-1 text-3xl font-bold capitalize">{fecha} · {hora}</div>
             <div className="mt-2 flex flex-wrap gap-3 text-sm text-primary-foreground/80">
               <span className="flex items-center gap-1">
                 <MapPin className="size-3.5 shrink-0" />
-                Cancha {lobby.turno.cancha.nro_cancha}
+                Cancha {cancha}
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="size-3.5 shrink-0" />
@@ -114,9 +126,14 @@ export function LobbyDetail({
               </span>
             </div>
           </div>
-          <button className="text-xs bg-white/10 backdrop-blur px-3 py-1.5 rounded-full flex items-center gap-1.5 hover:bg-white/15 shrink-0">
-            <Share2 className="size-3.5" /> Compartir
-          </button>
+            {esOrganizador && lobby.estado_lobby !== "Cancelado" && (
+              <button
+                onClick={() => setConfirmOpen(true)}
+                className="text-xs bg-red-500 hover:bg-red-600 active:bg-red-700 px-3 py-1.5 rounded-full flex items-center gap-1.5 text-white font-semibold transition shrink-0 shadow-[0_0_12px_rgba(239,68,68,0.5)] hover:shadow-[0_0_16px_rgba(239,68,68,0.7)]"
+              >
+                Cancelar lobby
+              </button>
+            )}
         </div>
         {lugaresVacios > 0 && (
           <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-lime text-lime-foreground text-xs font-bold">
@@ -132,14 +149,25 @@ export function LobbyDetail({
 
       {/* Jugadores */}
       <div>
-        <h3 className="font-bold mb-3">
-          Jugadores ({jugadoresConfirmados}/{jugadoresConfirmados + lugaresVacios})
-        </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold">
+            Jugadores ({jugadoresConfirmados}/{jugadoresConfirmados + lugaresVacios})
+          </h3>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full px-4 text-xs"
+            onClick={() => setChatOpen(true)}
+          >
+            <MessageSquare className="size-3.5" />
+            Chat del partido
+          </Button>
+        </div>
         <div className="grid sm:grid-cols-2 gap-3">
           {lobby.jugadores.map((lj) => (
             <div key={lj.id_jugador} className="relative">
               <PlayerSlot jugador={toJugadorSlot(lj, lj.id_jugador === lobby.id_creador)} />
-              {esOrganizador && lj.id_jugador !== lobby.id_creador && (
+              {esOrganizador && lj.id_jugador !== lobby.id_creador && lobby.estado_lobby === "Abierto" && (
                 <button
                   onClick={() => onExpulsarJugador(lj.id_jugador)}
                   className="absolute top-2 right-2 size-7 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive flex items-center justify-center transition"
@@ -182,34 +210,34 @@ export function LobbyDetail({
         </div>
       )}
 
-      {/* Acciones */}
-      {esOrganizador && (
-        <div className="flex flex-wrap gap-3">
-          <Button variant="outline" className="rounded-full px-5" onClick={() => setConfirmOpen(true)}>
-            Cancelar lobby
-          </Button>
-        </div>
-      )}
-
       {/* Dialog cancelar */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Cancelar lobby</DialogTitle>
             <DialogDescription>
-              Esta acción cancela el lobby del {fecha} a las {lobby.turno.hora} en la Cancha {lobby.turno.cancha.nro_cancha}. No se puede deshacer.
+              Esta acción cancela el lobby del {fecha} a las {hora} en la Cancha {cancha}. No se puede deshacer.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmOpen(false)}>
               Volver
             </Button>
-            <Button variant="destructive" onClick={() => setConfirmOpen(false)}>
+            <Button variant="destructive" onClick={async () => {
+              await onCancelarLobby();
+              setConfirmOpen(false);
+            }}>
               Cancelar lobby
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <LobbyChat
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        nombreLobby={nombreLobby}
+      />
     </div>
   );
 }

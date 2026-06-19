@@ -75,6 +75,7 @@ export async function findLobbyParaValidacion(
       id_creador: true,
       estado_lobby: true,
       jugadores_faltantes: true,
+      id_turno: true,
     },
   });
 }
@@ -85,6 +86,35 @@ export async function findTurnoParaLobby(client: DbClient, id_turno: number) {
     select: {
       estado_turno: true,
       lobby: { select: { id_lobby: true } },
+    },
+  });
+}
+
+export async function findTurnoBySchedule(
+  client: DbClient,
+  where: { id_cancha: number; fecha: Date; hora: string }
+) {
+  return client.turno.findFirst({
+    where,
+    select: {
+      id_turno: true,
+      estado_turno: true,
+      lobby: { select: { id_lobby: true } },
+    },
+  });
+}
+
+export async function createTurno(
+  client: DbClient,
+  data: { id_cancha: number; fecha: Date; hora: string; precio: number }
+) {
+  return client.turno.create({
+    data: {
+      id_cancha: data.id_cancha,
+      fecha: data.fecha,
+      hora: data.hora,
+      precio: data.precio,
+      estado_turno: "Disponible",
     },
   });
 }
@@ -106,18 +136,25 @@ export async function updateEstadoLobby(
   return client.lobby.update({ where: { id_lobby }, data });
 }
 
-export async function decrementarFaltantes(
+export async function decrementarFaltantesAtomico(
   client: DbClient,
-  id_lobby: number,
-  nuevosFaltantes: number
-): Promise<Lobby> {
-  return client.lobby.update({
-    where: { id_lobby },
-    data: {
-      jugadores_faltantes: nuevosFaltantes,
-      ...(nuevosFaltantes === 0 ? { estado_lobby: "Confirmado" } : {}),
-    },
+  id_lobby: number
+): Promise<{ actualizado: boolean; faltantesRestantes: number | null }> {
+  const result = await client.lobby.updateMany({
+    where: { id_lobby, jugadores_faltantes: { gt: 0 } },
+    data: { jugadores_faltantes: { decrement: 1 } },
   });
+
+  if (result.count === 0) {
+    return { actualizado: false, faltantesRestantes: null };
+  }
+
+  const lobby = await client.lobby.findUnique({
+    where: { id_lobby },
+    select: { jugadores_faltantes: true },
+  });
+
+  return { actualizado: true, faltantesRestantes: lobby?.jugadores_faltantes ?? null };
 }
 
 export async function incrementarFaltantes(
@@ -240,5 +277,51 @@ export async function findLobbiesByJugador(
     },
     include: lobbyInclude,
     orderBy: { turno: { fecha: "asc" } },
+  });
+}
+
+export async function lockTurnoParaLobby(client: DbClient, id_turno: number) {
+  return client.turno.update({
+    where: { id_turno },
+    data: { estado_turno: "Reservado" },
+  });
+}
+
+export async function confirmarLobbyConReserva(
+  client: DbClient,
+  id_lobby: number,
+  id_reserva: number
+): Promise<Lobby> {
+  return client.lobby.update({
+    where: { id_lobby },
+    data: { estado_lobby: "Confirmado", id_reserva },
+  });
+}
+
+export async function liberarTurno(client: DbClient, id_turno: number) {
+  return client.turno.update({
+    where: { id_turno },
+    data: { estado_turno: "Disponible" },
+  });
+}
+
+export async function desvincularTurno(
+  client: DbClient,
+  id_lobby: number
+): Promise<Lobby> {
+  return client.lobby.update({
+    where: { id_lobby },
+    data: { id_turno: null },
+  });
+}
+
+// notificaciones
+export async function cancelarTodasLasSolicitudes(
+  client: DbClient,
+  id_lobby: number
+) {
+  return client.solicitud.updateMany({
+    where: { id_lobby, estado_solicitud: "Pendiente" },
+    data: { estado_solicitud: "Cancelada" },
   });
 }

@@ -24,21 +24,28 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json(fail("Body inválido"), { status: 400 });
 
-  const { id_turno, jugadores_faltantes } = body as {
-    id_turno?: unknown;
-    jugadores_faltantes?: unknown;
-  };
+  const { id_turno, jugadores_faltantes, id_cancha, fecha, hora, precio } = body;
 
-  if (typeof id_turno !== "number" || typeof jugadores_faltantes !== "number") {
-    return NextResponse.json(fail("id_turno y jugadores_faltantes son requeridos"), {
+  if (typeof jugadores_faltantes !== "number") {
+    return NextResponse.json(fail("jugadores_faltantes es requerido"), {
+      status: 400,
+    });
+  }
+
+  if (typeof id_turno !== "number" && (typeof id_cancha !== "number" || !fecha || !hora)) {
+    return NextResponse.json(fail("id_turno o los datos del turno (id_cancha, fecha, hora) son requeridos"), {
       status: 400,
     });
   }
 
   const result = await lobbyService.crearLobby({
-    id_turno,
+    id_turno: typeof id_turno === "number" ? id_turno : undefined,
     id_creador: userId!,
     jugadores_faltantes,
+    id_cancha: typeof id_cancha === "number" ? id_cancha : undefined,
+    fecha: typeof fecha === "string" ? fecha : undefined,
+    hora: typeof hora === "string" ? hora : undefined,
+    precio: typeof precio === "number" ? precio : undefined,
   });
 
   if (result.error) {
@@ -47,6 +54,8 @@ export async function POST(req: NextRequest) {
       "El turno no está disponible",
       "El turno ya tiene un lobby asociado",
       "Turno no encontrado",
+      "Faltan datos para identificar o crear el turno",
+      "Fecha inválida",
     ].includes(result.error);
 
     return NextResponse.json(result, { status: esValidacion ? 422 : 500 });

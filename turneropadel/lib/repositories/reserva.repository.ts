@@ -14,12 +14,14 @@ export type ReservaWithRelations = Prisma.ReservaGetPayload<{
         cancha: true;
       };
     };
+    lobby: true;
   };
 }>;
 
 export type CreateReservaData = {
   id_jugador: string;
   id_turno: number;
+  precio?: number;
 };
 
 export type CreateReservaWithTurnoData = {
@@ -41,7 +43,29 @@ const reservaInclude = {
       cancha: true,
     },
   },
+  lobby: true,
 } satisfies Prisma.ReservaInclude;
+
+const lobbyInclude = {
+  turno: {
+    include: {
+      cancha: true,
+    },
+  },
+  jugadores: {
+    include: {
+      jugador: {
+        include: {
+          usuario: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.LobbyInclude;
+
+export type LobbyConJugadores = Prisma.LobbyGetPayload<{
+  include: typeof lobbyInclude;
+}>;
 
 export interface ReservaRepository {
   findAll(): Promise<ReservaWithRelations[]>;
@@ -49,8 +73,11 @@ export interface ReservaRepository {
   findByTurnoId(id_turno: number): Promise<Reserva | null>;
   findByJugadorId(id_jugador: string): Promise<ReservaWithRelations[]>;
   create(data: CreateReservaData): Promise<ReservaWithRelations>;
-  createWithTurno(data: CreateReservaWithTurnoData): Promise<ReservaWithRelations>;
+  createWithTurno(
+    data: CreateReservaWithTurnoData,
+  ): Promise<ReservaWithRelations>;
   delete(id_reserva: number): Promise<ReservaWithRelations>;
+  findLobbyByReservaId(id_reserva: number): Promise<LobbyConJugadores | null>;
 }
 
 export class PrismaReservaRepository implements ReservaRepository {
@@ -83,20 +110,23 @@ export class PrismaReservaRepository implements ReservaRepository {
   }
 
   create(data: CreateReservaData) {
-    return db.$transaction(async (tx) => {
-      const reserva = await tx.reserva.create({
-        data,
-        include: reservaInclude,
-      });
-
-      await tx.turno.update({
-        where: { id_turno: data.id_turno },
-        data: { estado_turno: "Reservado" },
-      });
-
-      return reserva;
+  return db.$transaction(async (tx) => {
+    const reserva = await tx.reserva.create({
+      data: { id_jugador: data.id_jugador, id_turno: data.id_turno },
+      include: reservaInclude,
     });
-  }
+
+    await tx.turno.update({
+      where: { id_turno: data.id_turno },
+      data: {
+        estado_turno: "Reservado",
+        ...(data.precio !== undefined ? { precio: data.precio } : {}),
+      },
+    });
+
+    return reserva;
+  });
+}
 
   createWithTurno(data: CreateReservaWithTurnoData) {
     return db.$transaction(async (tx) => {
@@ -135,10 +165,19 @@ export class PrismaReservaRepository implements ReservaRepository {
       return reserva;
     });
   }
+
+  findLobbyByReservaId(id_reserva: number) {
+    return db.lobby.findUnique({
+      where: { id_reserva },
+      include: lobbyInclude,
+    });
+  }
 }
 
 export function isKnownPrismaError(error: unknown, code: string) {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === code;
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError && error.code === code
+  );
 }
 
 export const reservaRepository = new PrismaReservaRepository();

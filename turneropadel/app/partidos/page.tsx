@@ -16,6 +16,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLobby } from "@/hooks/useLobby";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
+import { parseLocalDate } from "@/lib/utils";
 import type { ReservaWithRelations } from "@/lib/repositories/reserva.repository";
 import type { Partido, PartidoLobby, PartidoReserva } from "@/lib/types";
 
@@ -41,17 +42,20 @@ function toLobbyPartido(lobby: LobbyConRelaciones): PartidoLobby {
     status: "empty" as const,
   }));
 
+  const tieneTurno = Boolean(lobby.turno);
   return {
     id: lobby.id_lobby,
     tipo: "lobby",
-    fecha: new Date(lobby.turno.fecha).toLocaleDateString("es-AR", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    }),
-    hora: lobby.turno.hora,
-    club: `Cancha ${lobby.turno.cancha.nro_cancha}`,
-    cancha: `Cancha ${lobby.turno.cancha.nro_cancha}`,
+    fecha: tieneTurno
+      ? parseLocalDate(lobby.turno!.fecha).toLocaleDateString("es-AR", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        })
+      : "Sin turno",
+    hora: lobby.turno?.hora ?? "—",
+    club: tieneTurno ? `Cancha ${lobby.turno!.cancha.nro_cancha}` : "Turno no asignado",
+    cancha: tieneTurno ? `Cancha ${lobby.turno!.cancha.nro_cancha}` : "Turno no asignado",
     duracionMin: 90,
     estado: lobby.estado_lobby,
     jugadores: [...jugadoresConfirmados, ...lugaresVacios],
@@ -63,7 +67,7 @@ function toReservaPartido(reserva: ReservaWithRelations): PartidoReserva {
   return {
     id: reserva.id_reserva,
     tipo: "reserva",
-    fecha: new Date(reserva.turno.fecha).toLocaleDateString("es-AR", {
+    fecha: parseLocalDate(reserva.turno.fecha).toLocaleDateString("es-AR", {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -89,6 +93,8 @@ export default function MisPartidosPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [cancelando, setCancelando] = useState(false);
+
 
   const {
     lobby: lobbyDetalle,
@@ -98,20 +104,22 @@ export default function MisPartidosPage() {
     aceptarSolicitud,
     rechazarSolicitud,
     expulsarJugador,
+    cancelarLobby,
   } = useLobby(selectedId ?? 0);
 
   useEffect(() => {
     async function fetchPartidos() {
       setLoading(true);
       try {
+        
         const [resLobbies, resReservas] = await Promise.all([
           fetch("/api/lobby"),
           fetch("/api/reserva?jugador=me"),
         ]);
-
+        
         const lobbiesJson = resLobbies.ok ? await resLobbies.json() : { data: [] };
         const reservasJson = resReservas.ok ? await resReservas.json() : [];
-
+        
         const lobbies = (lobbiesJson.data as LobbyConRelaciones[]).map(toLobbyPartido);
         const reservas = (Array.isArray(reservasJson) ? reservasJson as ReservaWithRelations[] : []).map(toReservaPartido);
 
@@ -154,8 +162,27 @@ export default function MisPartidosPage() {
     if (isMobile) setSheetOpen(true);
   }
 
-  const selectedPartido =
-    partidos.find((p) => p.id === selectedId && p.tipo === selectedTipo) ?? null;
+  async function handleCancelarReserva() {
+    if (!selectedId) return;
+    await fetch(`/api/reserva/${selectedId}`, { method: "DELETE" });
+    setPartidos((prev) => prev.filter((p) => p.id !== selectedId));
+    setSelectedId(null);
+    setSelectedTipo(null);
+  }
+
+  const selectedPartido = partidos.find((p) => p.id === selectedId && p.tipo === selectedTipo) ?? null;
+
+  useEffect(() => {
+    if (selectedTipo !== "lobby" || !lobbyDetalle) return;
+
+    setPartidos((current) =>
+      current.map((partido) =>
+        partido.tipo === "lobby" && partido.id === lobbyDetalle.id_lobby
+          ? toLobbyPartido(lobbyDetalle)
+          : partido
+      )
+    );
+  }, [lobbyDetalle, selectedTipo]);
 
   const detailPanel = (() => {
     if (loading || estado === "loading") return <PanelSkeleton />;
@@ -177,7 +204,7 @@ export default function MisPartidosPage() {
     }
 
     if (selectedPartido.tipo === "reserva") {
-      return <ReservaDetail reserva={selectedPartido} />;
+      return <ReservaDetail reserva={selectedPartido} onCancelarReserva={handleCancelarReserva} />;
     }
 
     if (lobbyError) {
@@ -196,6 +223,7 @@ export default function MisPartidosPage() {
         onAceptarSolicitud={aceptarSolicitud}
         onRechazarSolicitud={rechazarSolicitud}
         onExpulsarJugador={expulsarJugador}
+        onCancelarLobby={cancelarLobby}
       />
     );
   })();
