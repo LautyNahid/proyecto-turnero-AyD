@@ -107,6 +107,10 @@ function formatPrice(value: string | number) {
   });
 }
 
+function isPastSlot(fecha: string, hora: string) {
+  return new Date(`${fecha}T${hora}:00`).getTime() <= Date.now();
+}
+
 export default function Reservar() {
   const [canchas, setCanchas] = useState<Cancha[]>([]);
   const [turnos, setTurnos] = useState<Turno[]>([]);
@@ -368,11 +372,12 @@ export default function Reservar() {
                     activeCanchas.map((cancha) => (
                       <tr key={cancha.id_cancha} className="border-t border-border">
                         <td className="p-3 sticky left-0 bg-card">
-                          <div className="font-semibold text-sm">Cancha {cancha.nro_cancha}</div>
+                          <div className="font-semibold text-sm whitespace-nowrap">Cancha {cancha.nro_cancha}</div>
                           
                         </td>
                         {hours.map((h) => {
                           const turno = turnosByCanchaAndHour.get(`${cancha.id_cancha}-${h}`);
+                          const isPast = isPastSlot(selectedDate.key, h);
                           const isOccupied = turno
                             ? OCCUPIED_STATES.includes(turno.estado_turno) || turno.bloqueos.length > 0
                             : false;
@@ -380,12 +385,14 @@ export default function Reservar() {
                             selected?.cancha.id_cancha === cancha.id_cancha &&
                             selected?.fecha === selectedDate.key &&
                             selected?.hora === h;
-                          const isAvailable = !isOccupied;
+                          const isAvailable = !isOccupied && !isPast;
                           const isBlocked = turno ? turno.bloqueos.length > 0 : false;
                           const cls = isSelected
                             ? "bg-lime text-lime-foreground ring-2 ring-lime"
                             : isAvailable
                             ? "bg-success/15 text-success hover:bg-success/25"
+                            : isPast
+                            ? "bg-muted text-muted-foreground/60 cursor-not-allowed"
                             : isBlocked
                             ? "bg-destructive/15 text-destructive cursor-not-allowed"
                             : turno
@@ -394,15 +401,17 @@ export default function Reservar() {
 
                           return (
                             <td key={h} className="p-1.5">
-                              <button
+                             <button
                                 disabled={!isAvailable}
                                 onClick={() => handleSelectSlot(cancha, turno, h)}
-                                className={`w-full h-10 rounded-lg text-xs font-semibold transition ${cls}`}
+                                className={`h-10 min-w-[84px] rounded-lg px-2 text-xs font-semibold transition ${cls}`}
                               >
                                 {isSelected
                                   ? "OK"
                                   : isAvailable
                                   ? "Libre"
+                                  : isPast
+                                  ? "No disp."
                                   : turno && turno.bloqueos.length > 0
                                   ? "Bloqueado"
                                   : turno?.estado_turno ?? "-"}
@@ -434,8 +443,8 @@ export default function Reservar() {
           )}
         </div>
 
-        <aside>
-          <div className="bg-card rounded-2xl border border-border shadow-card p-6 sticky top-24">
+        <aside className="self-start">
+          <div className="bg-card rounded-2xl border border-border shadow-card p-6">
             <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Tu reserva</div>
             {selected ? (
               <>
@@ -466,10 +475,7 @@ export default function Reservar() {
                   <Row label="Por jugador (x4)" value={`$${formatPrice(selected.precio / 4)}`} highlight />
                 </div>
 
-                <div className="mt-5 p-3 rounded-xl bg-accent/40 text-xs text-foreground/80 flex gap-2">
-                  <Info className="size-4 shrink-0 mt-0.5 text-primary" />
-                  La reserva queda asociada a tu usuario y el turno pasa a Reservado.
-                </div>
+              
 
                 {lobbyCreated ? (
                   <div className="mt-5 w-full flex items-center justify-center gap-2 bg-success/15 text-success font-semibold py-3 rounded-xl text-sm">
