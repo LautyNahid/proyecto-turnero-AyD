@@ -295,7 +295,7 @@ export default function Reservar() {
           <div className="bg-card rounded-2xl p-5 border border-border shadow-soft mb-5 flex items-center gap-4">
             <div className="size-14 rounded-xl bg-gradient-to-br from-primary to-sidebar text-primary-foreground flex items-center justify-center font-bold">CN</div>
             <div className="flex-1">
-              <div className="font-bold">Club Norte</div>
+              <div className="font-bold">ComplejoPadel</div>
               <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1">
                 <span className="flex items-center gap-1"><MapPin className="size-3" /> Av. Libertador 3400</span>
                 <span className="flex items-center gap-1"><Cloud className="size-3" /> 22 grados - Despejado</span>

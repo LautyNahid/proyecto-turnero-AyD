@@ -36,7 +36,7 @@ export function PlayerSlot({ jugador }: PlayerSlotProps) {
         {isEmpty ? (
           <>
             <div className="font-semibold text-sm">Lugar disponible</div>
-            <div className="text-xs text-muted-foreground">Invitá o aceptá solicitudes</div>
+            <div className="text-xs text-muted-foreground">Aceptá solicitudes</div>
           </>
         ) : (
           <>
@@ -64,11 +64,6 @@ export function PlayerSlot({ jugador }: PlayerSlotProps) {
         <span className="text-[10px] font-bold uppercase px-2 py-1 rounded-full bg-warning/20 text-warning-foreground shrink-0">
           Pendiente
         </span>
-      )}
-      {isEmpty && (
-        <button className="size-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 shrink-0">
-          <UserPlus className="size-4" />
-        </button>
       )}
     </div>
   );

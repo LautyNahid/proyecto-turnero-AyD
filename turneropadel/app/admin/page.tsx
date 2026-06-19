@@ -18,7 +18,7 @@ const todayBookings = [
 export default function Admin() {
   return (
     <CanchasCrudProvider>
-      <AppShell title="Panel del Complejo" subtitle="Club Norte - Gestion operativa">
+      <AppShell title="Panel del Complejo" subtitle="ComplejoPadel - Gestion operativa">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Kpi label="Reservas hoy" value="14" delta="+12%" tone="lime" />
           <Kpi label="Ingresos hoy" value="$38.4k" delta="+8%" />

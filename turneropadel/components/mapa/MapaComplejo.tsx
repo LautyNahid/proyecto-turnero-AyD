@@ -94,7 +94,7 @@ export function MapaComplejo({ idCancha }: Props) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <Marker position={posicion} icon={icon}>
-          <Popup>Club Norte</Popup>
+          <Popup>ComplejoPadel</Popup>
         </Marker>
       </MapContainer>
     </div>

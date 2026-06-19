@@ -89,7 +89,7 @@ export default function Perfil() {
   function abrirEvaluacion(reserva: (typeof agenda)[number]) {
     setPartidoSeleccionado({
       id: reserva.id_reserva,
-      club: "Club Norte",
+      club: "ComplejoPadel",
       court: `Cancha ${reserva.turno.cancha.nro_cancha}`,
       date: `${reserva.turno.fecha.slice(0, 10)} - ${reserva.turno.hora}`,
       status: reserva.turno.estado_turno,

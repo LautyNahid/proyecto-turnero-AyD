@@ -182,9 +182,6 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query, onCancela
                     ${lobby.turno?.precio ? Number(lobby.turno.precio).toLocaleString("es-AR") : "-"}
                   </td>
                   <td className="p-3 pr-5 text-right">
-                    <button className="size-8 rounded-lg hover:bg-muted inline-flex items-center justify-center text-muted-foreground">
-                      <MoreHorizontal className="size-4" />
-                    </button>
                   </td>
                 </tr>
               );

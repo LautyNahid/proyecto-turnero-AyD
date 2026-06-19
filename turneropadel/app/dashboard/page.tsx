@@ -76,9 +76,6 @@ export default function Home() {
             <Link href="/reservar" className="inline-flex items-center gap-2 bg-lime text-lime-foreground px-5 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition">
               <CalendarRange className="size-4" /> Reservar turno
             </Link>
-            <Link href="/lobby" className="inline-flex items-center gap-2 bg-white/10 backdrop-blur px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-white/15 transition">
-              <Users2 className="size-4" /> Crear partido
-            </Link>
           </div>
         </div>
 
@@ -132,7 +129,6 @@ export default function Home() {
         <SectionHeader
           title="Partidos abiertos"
           subtitle="Sumate a un partido que necesita jugadores"
-          action={{ label: "Crear nuevo", href: "/lobby", icon: true }}
         />
         {loadingLobbies ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
