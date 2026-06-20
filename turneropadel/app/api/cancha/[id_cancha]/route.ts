@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { routeErrorResponse } from "@/lib/http/rest-response";
 import { canchaService } from "@/lib/services/cancha.service";
-import { requireRol } from "@/lib/auth";
+import { requireAccion } from "@/lib/auth";
 
 type RouteContext = {
   params: Promise<{ id_cancha: string }>;
@@ -20,7 +20,7 @@ export async function GET(_req: Request, context: RouteContext) {
 
 export async function PATCH(req: Request, context: RouteContext) {
   try {
-    const { userId, response } = await requireRol("admin");
+    const { response } = await requireAccion("cancha.editar");
     if (response) return response;
   
     const { id_cancha } = await context.params;
@@ -35,7 +35,7 @@ export async function PATCH(req: Request, context: RouteContext) {
 
 export async function DELETE(_req: Request, context: RouteContext) {
   try {
-    const { userId, response } = await requireRol("admin");
+    const { response } = await requireAccion("cancha.eliminar");
     if (response) return response;
 
     const { id_cancha } = await context.params;
