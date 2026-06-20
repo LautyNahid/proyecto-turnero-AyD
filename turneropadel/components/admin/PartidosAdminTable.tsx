@@ -97,11 +97,12 @@ interface PartidosAdminTableProps {
   filtro: "todos" | "lobby" | "turno";
   query: string;
   onCancelarReserva: (reserva: ReservaWithRelations) => void;
+  onCancelarLobby: (lobby: LobbyConRelaciones) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function PartidosAdminTable({ lobbies, reservas, filtro, query, onCancelarReserva }: PartidosAdminTableProps) {
+export function PartidosAdminTable({ lobbies, reservas, filtro, query, onCancelarReserva, onCancelarLobby }: PartidosAdminTableProps) {
   const [page, setPage] = useState(0);
   const q = query.toLowerCase().trim();
 
@@ -196,6 +197,14 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query, onCancela
                     ${lobby.turno?.precio ? Number(lobby.turno.precio).toLocaleString("es-AR") : "-"}
                   </td>
                   <td className="p-3 pr-5 text-right">
+                    {lobby.estado_lobby !== "Cancelado" && lobby.estado_lobby !== "Finalizado" && (
+                      <button
+                        onClick={() => onCancelarLobby(lobby)}
+                        className="text-xs font-semibold text-destructive hover:underline px-2 py-1 rounded-lg hover:bg-destructive/10"
+                      >
+                        Cancelar
+                      </button>
+                    )}
                   </td>
                 </tr>
               );

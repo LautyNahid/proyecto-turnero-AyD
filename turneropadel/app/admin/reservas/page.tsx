@@ -182,6 +182,7 @@ export default function AdminPartidosPage() {
           filtro={filtro}
           query={query}
           onCancelarReserva={setCancelReservaTarget}
+          onCancelarLobby={setCancelTarget}
         />
       )}
 
