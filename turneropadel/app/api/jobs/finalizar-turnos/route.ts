@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { EstadoTurno } from "@prisma/client";
 import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
 import { db } from "@/lib/db";
 
@@ -6,7 +7,7 @@ export const runtime = "nodejs";
 
 const TIMEZONE = "America/Argentina/Buenos_Aires";
 const DURACION_TURNO_MINUTOS = 90;
-const ESTADOS_FINALIZABLES = ["Reservado", "EnCurso"] as const;
+const ESTADOS_FINALIZABLES: EstadoTurno[] = ["Reservado", "EnCurso"];
 
 function getFechaKey(fecha: Date) {
   return fecha.toISOString().slice(0, 10);
