@@ -29,6 +29,8 @@ export type TurnoConBloqueo = Turno & {
   cancha: { nro_cancha: number };
 };
 
+export type TurnoFinalizacionCandidate = Pick<Turno, "id_turno" | "fecha" | "hora">;
+
 export interface TurnoRepository {
   findAll(): Promise<Turno[]>;
   findMany(filters: TurnoFilters): Promise<Turno[]>;
@@ -40,6 +42,8 @@ export interface TurnoRepository {
   updatePrecioDisponibles(id_cancha: number, precio: number, hoy: Date): Promise<number>;
   findReservaByTurno(id_turno: number): Promise<{ id_reserva: number } | null>;
   findManyConBloqueos(filters: TurnoFilters): Promise<TurnoConBloqueo[]>;
+  findFinalizacionCandidates(estados: EstadoTurno[], fechaHasta: Date): Promise<TurnoFinalizacionCandidate[]>;
+  updateManyEstado(ids: number[], estado: EstadoTurno): Promise<number>;
 }
 
 export class PrismaTurnoRepository implements TurnoRepository {
@@ -98,6 +102,35 @@ export class PrismaTurnoRepository implements TurnoRepository {
     orderBy: [{ fecha: "asc" }, { hora: "asc" }],
   }) as Promise<TurnoConBloqueo[]>;
 }
+
+  findFinalizacionCandidates(estados: EstadoTurno[], fechaHasta: Date) {
+    return db.turno.findMany({
+      where: {
+        estado_turno: { in: estados },
+        fecha: { lte: fechaHasta },
+      },
+      select: {
+        id_turno: true,
+        fecha: true,
+        hora: true,
+      },
+    });
+  }
+
+  async updateManyEstado(ids: number[], estado: EstadoTurno) {
+    if (ids.length === 0) return 0;
+
+    const result = await db.turno.updateMany({
+      where: {
+        id_turno: { in: ids },
+      },
+      data: {
+        estado_turno: estado,
+      },
+    });
+
+    return result.count;
+  }
 
   findById(id_turno: number) {
     return db.turno.findUnique({
