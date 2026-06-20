@@ -27,6 +27,7 @@ type ActualizarEstadoInput = {
   id_lobby: number;
   estado_lobby: EstadoLobby;
   id_solicitante: string;
+  esPrivilegiado: boolean;
 };
 
 type ResponderSolicitudInput = {
@@ -59,6 +60,15 @@ function assertEsOrganizador(id_creador: string, id_solicitante: string) {
   if (id_creador !== id_solicitante) throw new Error("Sin permisos");
 }
 
+function assertPuedeCancelarLobby(
+  id_creador: string,
+  id_solicitante: string,
+  esPrivilegiado: boolean
+) {
+  if (esPrivilegiado) return;
+  assertEsOrganizador(id_creador, id_solicitante);
+}
+
 function assertLobbyAbierto(estado: EstadoLobby) {
   if (estado !== "Abierto") throw new Error("El lobby ya no está abierto");
 }
@@ -72,6 +82,8 @@ function assertTurnoVinculado(
 ): asserts id_turno is number {
   if (id_turno === null) throw new Error("El lobby no tiene un turno vinculado");
 }
+
+
 
 //  Service 
 
@@ -163,12 +175,12 @@ export async function crearLobby(
 export async function actualizarEstadoLobby(
   input: ActualizarEstadoInput
 ): Promise<ApiResponse<Lobby | null>> {
-  const { id_lobby, estado_lobby, id_solicitante } = input;
+  const { id_lobby, estado_lobby, id_solicitante, esPrivilegiado } = input;
 
   try {
     const lobby = await repo.findLobbyParaValidacion(db, id_lobby);
     assertLobbyExiste(lobby);
-    assertEsOrganizador(lobby.id_creador, id_solicitante);
+    assertPuedeCancelarLobby(lobby.id_creador, id_solicitante, esPrivilegiado);
 
     if (estado_lobby === "Cancelado" && lobby.id_turno === null) {
       throw new Error("El lobby ya fue cancelado");
