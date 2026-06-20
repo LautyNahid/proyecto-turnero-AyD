@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { routeErrorResponse } from "@/lib/http/rest-response";
 import { bloqueoService } from "@/lib/services/bloqueo.service";
-import { requireRol } from "@/lib/auth";
+import { requireAccion  } from "@/lib/auth";
 
 type RouteContext = {
   params: Promise<{ id_turno: string }>;
@@ -9,7 +9,7 @@ type RouteContext = {
 
 export async function POST(req: Request, context: RouteContext) {
   try {
-    const { userId, response } = await requireRol("admin");
+    const { response } = await requireAccion("turno.bloquear");
     if (response) return response;
 
     const { id_turno } = await context.params;
@@ -24,7 +24,7 @@ export async function POST(req: Request, context: RouteContext) {
 
 export async function DELETE(_req: Request, context: RouteContext) {
   try {
-    const { userId, response } = await requireRol("admin");
+    const { response } = await requireAccion("turno.bloquear");
     if (response) return response;
 
     const { id_turno } = await context.params;
