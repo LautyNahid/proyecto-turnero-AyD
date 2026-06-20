@@ -12,6 +12,7 @@ export const lobbyInclude = {
       hora: true,
       fecha: true,
       precio: true,
+      estado_turno: true,
       cancha: { select: { id_cancha: true, nro_cancha: true } },
     },
   },

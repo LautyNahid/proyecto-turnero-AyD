@@ -122,11 +122,16 @@ function MisPartidosContent() {
         const lobbiesJson = resLobbies.ok ? await resLobbies.json() : { data: [] };
         const reservasJson = resReservas.ok ? await resReservas.json() : [];
         
-        const lobbies = (lobbiesJson.data as LobbyConRelaciones[]).map(toLobbyPartido);
-        const reservas = (Array.isArray(reservasJson) ? reservasJson as ReservaWithRelations[] : []).map(toReservaPartido);
+        const lobbies = (lobbiesJson.data as LobbyConRelaciones[])
+          .filter((lobby) => lobby.turno && lobby.turno.estado_turno !== "Finalizado")
+          .map(toLobbyPartido);
+        const reservas = (Array.isArray(reservasJson) ? reservasJson as ReservaWithRelations[] : [])
+          .filter((reserva) => reserva.turno.estado_turno !== "Finalizado")
+          .map(toReservaPartido);
 
         const todos: Partido[] = [...lobbies, ...reservas];
 
+        const hasRequestedPartido = requestedIdParam !== null || requestedTipoParam !== null;
         const requestedId = Number(requestedIdParam);
         const requestedTipo = requestedTipoParam;
         const requestedPartido = todos.find(
@@ -135,12 +140,15 @@ function MisPartidosContent() {
             (requestedTipo === "lobby" || requestedTipo === "reserva") &&
             partido.tipo === requestedTipo,
         );
-        const initialPartido = requestedPartido ?? todos[0];
+        const initialPartido = requestedPartido ?? (hasRequestedPartido ? null : todos[0]);
 
         setPartidos(todos);
         if (initialPartido) {
           setSelectedId(initialPartido.id);
           setSelectedTipo(initialPartido.tipo);
+        } else {
+          setSelectedId(null);
+          setSelectedTipo(null);
         }
       } catch {
         setFetchError("Error de red");
@@ -173,18 +181,6 @@ function MisPartidosContent() {
   }
 
   const selectedPartido = partidos.find((p) => p.id === selectedId && p.tipo === selectedTipo) ?? null;
-
-  useEffect(() => {
-    if (selectedTipo !== "lobby" || !lobbyDetalle) return;
-
-    setPartidos((current) =>
-      current.map((partido) =>
-        partido.tipo === "lobby" && partido.id === lobbyDetalle.id_lobby
-          ? toLobbyPartido(lobbyDetalle)
-          : partido
-      )
-    );
-  }, [lobbyDetalle, selectedTipo]);
 
   const detailPanel = (() => {
     if (loading || estado === "loading") return <PanelSkeleton />;
