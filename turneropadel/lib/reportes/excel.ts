@@ -6,6 +6,10 @@ export async function generarExcelReporteSemanal(datos: ReporteDatos): Promise<B
   workbook.creator = "SalePadel";
   workbook.created = new Date();
 
+  const canchaDemandada = datos.canchas.find(
+    (c) => c.id_cancha === datos.metricas_globales.cancha_mas_demandada,
+  );
+
   // ── Hoja Resumen ──────────────────────────────────────────────────────────
   const resumen = workbook.addWorksheet("Resumen");
   resumen.columns = [
@@ -16,7 +20,7 @@ export async function generarExcelReporteSemanal(datos: ReporteDatos): Promise<B
     { metrica: "Período inicio", valor: datos.periodo.inicio },
     { metrica: "Período fin", valor: datos.periodo.fin },
     { metrica: "Total ingresos", valor: datos.metricas_globales.total_ingresos },
-    { metrica: "Cancha más demandada (id)", valor: datos.metricas_globales.cancha_mas_demandada ?? "N/A" },
+    { metrica: "Cancha más demandada", valor: canchaDemandada ? `Cancha ${canchaDemandada.nro_cancha}` : "N/A" },
     { metrica: "Hora pico global", valor: datos.metricas_globales.hora_pico_global ?? "N/A" },
     { metrica: "% Cancelaciones", valor: datos.metricas_globales.porcentaje_cancelaciones },
   ]);

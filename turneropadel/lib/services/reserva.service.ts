@@ -98,6 +98,12 @@ function calcularFechaHoraTurno(fecha: Date, hora: string): Date {
   return fromZonedTime(`${fechaStr}T${hora}:00`, TIMEZONE);
 }
 
+function ensureTurnoNoPasado(fecha: Date, hora: string) {
+  if (calcularFechaHoraTurno(fecha, hora).getTime() <= Date.now()) {
+    throw new ServiceError("No se puede reservar un turno en un horario pasado", 409);
+  }
+}
+
 function calcularPrecioTurno(precioBaseCancha: number, hora: string): number {
   const esPico = hora >= HORA_INICIO_RECARGO;
   return esPico ? Math.round(precioBaseCancha * RECARGO_HORARIO_PICO * 100) / 100 : precioBaseCancha;
@@ -116,7 +122,7 @@ export class ReservaService {
   }
 
   obtenerReservasPorJugador(id_jugador: string) {
-    return this.repository.findByJugadorId(id_jugador);
+    return this.repository.findHistorialJugador(id_jugador);
   }
 
   async obtenerReservaPorId(idParam: string) {
@@ -145,6 +151,7 @@ export class ReservaService {
       if ("id_turno" in payload) {
         const id_turno = parsePositiveInteger(payload.id_turno, "id_turno");
         const turno = await this.ensureTurnoReservable(id_turno);
+        ensureTurnoNoPasado(turno.fecha, turno.hora);
         const cancha = await this.obtenerCanchaConPrecio(turno.id_cancha);
         const precio = calcularPrecioTurno(cancha.precio ?? 0, turno.hora);
 
@@ -154,6 +161,7 @@ export class ReservaService {
       const id_cancha = parsePositiveInteger(payload.id_cancha, "id_cancha");
       const fecha = parseFecha(payload.fecha);
       const hora = parseHora(payload.hora);
+      ensureTurnoNoPasado(fecha, hora);
 
       const cancha = await this.obtenerCanchaConPrecio(id_cancha);
       const precio = calcularPrecioTurno(cancha.precio ?? 0, hora);

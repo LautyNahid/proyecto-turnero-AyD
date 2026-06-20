@@ -1,5 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { Cloud, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
 import { parseLocalDate } from "@/lib/utils";
 
@@ -31,9 +31,6 @@ export function LobbyCard({ lobby, onClick }: LobbyCardProps) {
         <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-lime text-lime-foreground">
           {lobby.jugadores_faltantes}{" "}
           {lobby.jugadores_faltantes === 1 ? "lugar" : "lugares"}
-        </span>
-        <span className="text-xs text-muted-foreground flex items-center gap-1">
-          <Cloud className="size-3" /> —
         </span>
       </div>
       <div className="mt-3 font-bold leading-tight">
