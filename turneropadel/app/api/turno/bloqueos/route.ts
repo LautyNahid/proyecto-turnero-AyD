@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { routeErrorResponse } from "@/lib/http/rest-response";
 import { bloqueoService } from "@/lib/services/bloqueo.service";
-import { requireRol } from "@/lib/auth";
+import { requireAccion  } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
-    const { response } = await requireRol("admin");
+    const { response } = await requireAccion("turno.bloquear");
     if (response) return response;
 
     const body = await req.json();

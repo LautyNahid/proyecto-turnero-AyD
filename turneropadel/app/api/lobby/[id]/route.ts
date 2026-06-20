@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, requireRol } from "@/lib/auth";
+import { getRolUsuario, requireAuth } from "@/lib/auth";
+import { puedeEjecutar } from "@/lib/permissions";
 import { fail } from "@/lib/types";
 import * as lobbyService from "@/lib/services/lobby.service";
 import type { EstadoLobby } from "@prisma/client";
@@ -29,7 +30,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
 }
 
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
-  const { userId, response } = await requireRol("jugador", "admin");
+  const { userId, response } = await requireAuth();
   if (response) return response;
 
   const { id } = await params;
@@ -50,11 +51,16 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     );
   }
 
+  const roles = await getRolUsuario(userId!);
+  const esPrivilegiado = puedeEjecutar(roles ?? [], "lobby.cancelar.ajena");
+
   const result = await lobbyService.actualizarEstadoLobby({
     id_lobby,
     estado_lobby: estado_lobby as EstadoLobby,
     id_solicitante: userId!,
+    esPrivilegiado,
   });
+
 
   if (result.error) {
     const status = result.error === "Lobby no encontrado" ? 404

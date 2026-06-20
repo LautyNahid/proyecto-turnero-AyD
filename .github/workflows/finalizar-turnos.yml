@@ -1,0 +1,16 @@
+name: Finalizar turnos vencidos
+
+on:
+  schedule:
+    - cron: "*/45 * * * *"
+  workflow_dispatch:
+
+jobs:
+  finalizar-turnos:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Llamar endpoint de finalizacion
+        run: |
+          curl -f -X POST "${{ secrets.APP_URL }}/api/jobs/finalizar-turnos" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

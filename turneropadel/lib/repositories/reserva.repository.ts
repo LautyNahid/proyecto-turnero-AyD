@@ -78,6 +78,7 @@ export interface ReservaRepository {
   ): Promise<ReservaWithRelations>;
   delete(id_reserva: number): Promise<ReservaWithRelations>;
   findLobbyByReservaId(id_reserva: number): Promise<LobbyConJugadores | null>;
+  findHistorialJugador(id_jugador: string): Promise<ReservaWithRelations[]>;
 }
 
 export class PrismaReservaRepository implements ReservaRepository {
@@ -98,6 +99,19 @@ export class PrismaReservaRepository implements ReservaRepository {
   findByTurnoId(id_turno: number) {
     return db.reserva.findUnique({
       where: { id_turno },
+    });
+  }
+  
+  findHistorialJugador(id_jugador: string) {
+    return db.reserva.findMany({
+      where: {
+        OR: [
+          { id_jugador },
+          { lobby: { jugadores: { some: { id_jugador } } } },
+        ],
+      },
+      include: reservaInclude,
+      orderBy: { creada_en: "desc" },
     });
   }
 

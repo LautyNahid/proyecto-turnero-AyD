@@ -73,7 +73,7 @@ export default function Home() {
 
   return (
     <AppShell
-      title="Hola, Martín"
+      title={`Hola, ${user?.firstName || 'Jugador'}`}
       subtitle="¿Listo para jugar tu próximo partido?"
     >
       {/* ── Hero + Stats — no tocar ─────────────────────────────────────── */}
