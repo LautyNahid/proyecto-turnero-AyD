@@ -137,6 +137,29 @@ export async function updateEstadoLobby(
   return client.lobby.update({ where: { id_lobby }, data });
 }
 
+export async function finalizarLobbiesPorTurnos(
+  client: DbClient,
+  idsTurno: number[]
+): Promise<number> {
+  if (idsTurno.length === 0) return 0;
+
+  const result = await client.lobby.updateMany({
+    where: {
+      id_turno: { in: idsTurno },
+      estado_lobby: { in: ["Abierto", "Confirmado"] },
+    },
+    data: {
+      estado_lobby: "Finalizado",
+    },
+  });
+
+  return result.count;
+}
+
+export function finalizarLobbiesPorTurnosIds(idsTurno: number[]): Promise<number> {
+  return finalizarLobbiesPorTurnos(db, idsTurno);
+}
+
 export async function decrementarFaltantesAtomico(
   client: DbClient,
   id_lobby: number

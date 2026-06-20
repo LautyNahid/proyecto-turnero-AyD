@@ -1,5 +1,6 @@
 import type { EstadoTurno } from "@prisma/client";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import * as lobbyRepository from "@/lib/repositories/lobby.repository";
 import { turnoRepository } from "@/lib/repositories/turno.repository";
 import type {
   TurnoFinalizacionCandidate,
@@ -13,6 +14,7 @@ const ESTADO_FINAL = "Finalizado";
 
 export type FinalizarTurnosResult = {
   finalizados: number;
+  lobbiesFinalizados: number;
   ids: number[];
 };
 
@@ -48,9 +50,11 @@ export class TurnoFinalizacionService {
       .map((turno) => turno.id_turno);
 
     const finalizados = await this.repository.updateManyEstado(idsFinalizables, ESTADO_FINAL);
+    const lobbiesFinalizados = await lobbyRepository.finalizarLobbiesPorTurnosIds(idsFinalizables);
 
     return {
       finalizados,
+      lobbiesFinalizados,
       ids: idsFinalizables,
     };
   }
