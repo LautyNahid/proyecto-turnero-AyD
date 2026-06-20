@@ -5,6 +5,7 @@ export const RUTAS_PUBLICAS = [
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/webhooks(.*)",
+  "/api/jobs/finalizar-turnos",
 ];
 
 export const RUTAS_ADMIN = ["/admin(.*)"];
