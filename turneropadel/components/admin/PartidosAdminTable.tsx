@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MapPin, MoreHorizontal, Users2, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { MapPin, Users2, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { cn, parseLocalDate } from "@/lib/utils";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
 import type { ReservaWithRelations } from "@/lib/repositories/reserva.repository";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+const ROWS_PER_PAGE = 10;
 
 type EstadoLobby = "Abierto" | "Confirmado" | "Finalizado" | "Cancelado";
 type EstadoTurno = "Disponible" | "Reservado" | "EnCurso" | "Finalizado";
@@ -99,6 +102,7 @@ interface PartidosAdminTableProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function PartidosAdminTable({ lobbies, reservas, filtro, query, onCancelarReserva }: PartidosAdminTableProps) {
+  const [page, setPage] = useState(0);
   const q = query.toLowerCase().trim();
 
   const filasLobby = lobbies
@@ -125,6 +129,16 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query, onCancela
 
   const totalFiltrado = filasLobby.length + filasReserva.length;
   const totalGeneral = lobbies.length + reservas.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltrado / ROWS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages - 1);
+  const pageStart = currentPage * ROWS_PER_PAGE;
+  const pageEnd = pageStart + ROWS_PER_PAGE;
+  const filasLobbyPagina = filasLobby.slice(pageStart, pageEnd);
+  const reservasStart = Math.max(0, pageStart - filasLobby.length);
+  const reservasEnd = Math.max(0, pageEnd - filasLobby.length);
+  const filasReservaPagina = filasReserva.slice(reservasStart, reservasEnd);
+  const primerResultado = currentPage * ROWS_PER_PAGE + 1;
+  const ultimoResultado = Math.min(totalFiltrado, (currentPage + 1) * ROWS_PER_PAGE);
 
   if (totalFiltrado === 0) {
     return (
@@ -153,7 +167,7 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query, onCancela
             </tr>
           </thead>
           <tbody>
-            {filasLobby.map((lobby) => {
+            {filasLobbyPagina.map((lobby) => {
               const jugadoresActivos = lobby.jugadores.length;
               const capacidad = jugadoresActivos + lobby.jugadores_faltantes;
 
@@ -187,7 +201,7 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query, onCancela
               );
             })}
 
-            {filasReserva.map((reserva) => (
+            {filasReservaPagina.map((reserva) => (
               <tr key={`reserva-${reserva.id_reserva}`} className="border-t border-border hover:bg-muted/30">
                 <td className="p-3 pl-5 font-mono text-xs text-muted-foreground">R-{reserva.id_reserva}</td>
                 <td className="p-3 font-mono text-xs text-muted-foreground">T-{reserva.turno.id_turno}</td>
@@ -225,10 +239,29 @@ export function PartidosAdminTable({ lobbies, reservas, filtro, query, onCancela
         </table>
       </div>
       <div className="px-5 py-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-        <div>Mostrando {totalFiltrado} de {totalGeneral} partidos</div>
+        <div>
+          Mostrando {primerResultado}-{ultimoResultado} de {totalFiltrado} filtrados ({totalGeneral} total)
+        </div>
         <div className="flex items-center gap-1">
-          <button className="px-2 py-1 rounded hover:bg-muted">‹ Anterior</button>
-          <button className="px-2 py-1 rounded hover:bg-muted">Siguiente ›</button>
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.max(0, current - 1))}
+            disabled={currentPage === 0}
+            className="px-2 py-1 rounded hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+          >
+            Anterior
+          </button>
+          <span className="px-2 py-1 font-semibold">
+            {currentPage + 1} de {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
+            disabled={currentPage >= totalPages - 1}
+            className="px-2 py-1 rounded hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+          >
+            Siguiente
+          </button>
         </div>
       </div>
     </section>

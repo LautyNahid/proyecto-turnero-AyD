@@ -11,17 +11,18 @@ import { LobbySheet } from "@/components/partidos/LobbySheet";
 import {
   CalendarRange,
   MapPin,
-  Users2,
   Clock,
+  ChevronLeft,
   ChevronRight,
   Trophy,
-  Flame,
   Star,
   MessageCircle,
 } from "lucide-react";
 import { usePerfil } from "@/hooks/usePerfil";
 import { useAgenda } from "@/hooks/useAgenda";
 import type { LobbyConRelaciones } from "@/lib/repositories/lobby.repository";
+
+const LOBBIES_PER_PAGE = 12;
 
 // ─── Mock data Par 1 (no tocar) ───────────────────────────────────────────────
 
@@ -34,6 +35,7 @@ export default function Home() {
   const { agenda } = useAgenda(idUsuario);
   const [now] = useState(() => Date.now());
   const [lobbies, setLobbies] = useState<LobbyConRelaciones[]>([]);
+  const [lobbiesPage, setLobbiesPage] = useState(0);
   const [loadingLobbies, setLoadingLobbies] = useState(true);
   const [selectedLobby, setSelectedLobby] = useState<LobbyConRelaciones | null>(
     null,
@@ -55,6 +57,12 @@ export default function Home() {
   const cantidadValoraciones = perfil
     ? String(perfil.evaluaciones_recibidas)
     : "-";
+  const totalLobbyPages = Math.max(1, Math.ceil(lobbies.length / LOBBIES_PER_PAGE));
+  const currentLobbyPage = Math.min(lobbiesPage, totalLobbyPages - 1);
+  const lobbiesVisibles = lobbies.slice(
+    currentLobbyPage * LOBBIES_PER_PAGE,
+    currentLobbyPage * LOBBIES_PER_PAGE + LOBBIES_PER_PAGE,
+  );
 
   useEffect(() => {
     async function fetchLobbies() {
@@ -66,6 +74,7 @@ export default function Home() {
             (lobby) => lobby.estado_lobby !== "Finalizado" && lobby.turno?.estado_turno !== "Finalizado",
           );
           setLobbies(lobbiesVigentes);
+          setLobbiesPage(0);
         }
       } catch {
         // silencioso — la sección simplemente no muestra lobbies
@@ -190,14 +199,41 @@ export default function Home() {
             No hay partidos abiertos por el momento.
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {lobbies.map((lobby) => (
-              <LobbyCard
-                key={lobby.id_lobby}
-                lobby={lobby}
-                onClick={() => setSelectedLobby(lobby)}
-              />
-            ))}
+          <div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {lobbiesVisibles.map((lobby) => (
+                <LobbyCard
+                  key={lobby.id_lobby}
+                  lobby={lobby}
+                  onClick={() => setSelectedLobby(lobby)}
+                />
+              ))}
+            </div>
+            {lobbies.length > LOBBIES_PER_PAGE && (
+              <div className="mt-4 flex items-center justify-center gap-2 text-sm">
+                <button
+                  type="button"
+                  onClick={() => setLobbiesPage((page) => Math.max(0, page - 1))}
+                  disabled={currentLobbyPage === 0}
+                  className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+                  aria-label="Pagina anterior de lobbies"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <span className="min-w-28 text-center font-semibold text-muted-foreground">
+                  {currentLobbyPage + 1} de {totalLobbyPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setLobbiesPage((page) => Math.min(totalLobbyPages - 1, page + 1))}
+                  disabled={currentLobbyPage >= totalLobbyPages - 1}
+                  className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+                  aria-label="Pagina siguiente de lobbies"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </section>
