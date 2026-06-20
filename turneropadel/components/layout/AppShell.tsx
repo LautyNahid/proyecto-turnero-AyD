@@ -16,9 +16,11 @@ import { ReactNode, useState } from "react";
 import { cn } from "@/lib/utils";
 import { HeaderAuth } from "@/components/layout/headerAuth";
 import { NotificationsDropdown } from "@/components/layout/NotificationsDropdown";
+import { useRolUsuario } from "@/hooks/useRolUsuario";
+import { puedeVerPanelAdmin } from "@/lib/permissions";
 
 const navMain = [
-  { to: "/", label: "Inicio", icon: LayoutDashboard },
+  { to: "/dashboard", label: "Inicio", icon: LayoutDashboard },
   { to: "/reservar", label: "Reservar turno", icon: CalendarRange },
   { to: "/partidos", label: "Mis Partidos", icon: Users2 },
 ];
@@ -39,10 +41,12 @@ function SidebarNav({
   pathname,
   onNavigate,
   onClose,
+  mostrarAdmin,
 }: {
   pathname: string;
   onNavigate: () => void;
   onClose: () => void;
+  mostrarAdmin: boolean;
 }) {
   return (
     <>
@@ -74,7 +78,7 @@ function SidebarNav({
         </div>
         <ul className="space-y-0.5">
           {navMain.map((item) => {
-            const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+            const active = pathname.startsWith(item.to);
             return (
               <li key={item.to}>
                 <Link
@@ -95,32 +99,36 @@ function SidebarNav({
           })}
         </ul>
 
-        <div className="text-[10px] uppercase tracking-wider text-sidebar-foreground/50 px-3 mt-6 mb-2">
-          Administración
-        </div>
-        <ul className="space-y-0.5">
-          {navAdmin.map((item) => {
-            const active =
-              item.to === "/admin" ? pathname === "/admin" : pathname.startsWith(item.to);
-            return (
-              <li key={item.to}>
-                <Link
-                  href={item.to}
-                  onClick={onNavigate}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
-                    active
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold"
-                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  )}
-                >
-                  <item.icon className="size-4" />
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        {mostrarAdmin && (
+          <>
+            <div className="text-[10px] uppercase tracking-wider text-sidebar-foreground/50 px-3 mt-6 mb-2">
+              Administración
+            </div>
+            <ul className="space-y-0.5">
+              {navAdmin.map((item) => {
+                const active =
+                  item.to === "/admin" ? pathname === "/admin" : pathname.startsWith(item.to);
+                return (
+                  <li key={item.to}>
+                    <Link
+                      href={item.to}
+                      onClick={onNavigate}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                        active
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold"
+                          : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      )}
+                    >
+                      <item.icon className="size-4" />
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
       </nav>
     </>
   );
@@ -129,6 +137,8 @@ function SidebarNav({
 export function AppShell({ children, title, subtitle }: AppShellProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { roles } = useRolUsuario();
+  const mostrarAdmin = puedeVerPanelAdmin(roles);
 
   const close = () => setSidebarOpen(false);
 
@@ -146,7 +156,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
 
       {/* ── Sidebar desktop (static) ── */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
-        <SidebarNav pathname={pathname} onNavigate={close} onClose={close} />
+        <SidebarNav pathname={pathname} onNavigate={close} onClose={close} mostrarAdmin={mostrarAdmin} />
       </aside>
 
       {/* ── Sidebar mobile (slide-over) ── */}
@@ -158,7 +168,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <SidebarNav pathname={pathname} onNavigate={close} onClose={close} />
+        <SidebarNav pathname={pathname} onNavigate={close} onClose={close} mostrarAdmin={mostrarAdmin} />
       </aside>
 
       {/* ── Main column ── */}
