@@ -226,7 +226,7 @@ export class ReservaService {
     await this.ensureTurnoSinReserva(id_turno);
   }
 
-  async eliminarReserva(idParam: string, userId: string, esAdmin: boolean) {
+  async eliminarReserva(idParam: string, userId: string, esPrivilegiado: boolean) {
     const id_reserva = parseReservaId(idParam);
     const reserva = await this.repository.findById(id_reserva);
 
@@ -234,11 +234,11 @@ export class ReservaService {
       throw new ServiceError("Reserva no encontrada", 404);
     }
 
-    if (!esAdmin && reserva.id_jugador !== userId) {
+    if (!esPrivilegiado  && reserva.id_jugador !== userId) {
       throw new ServiceError("No tenes permiso para cancelar esta reserva", 403);
     }
 
-    if (!esAdmin) {
+    if (!esPrivilegiado) {
       await this.aplicarPenalizacionSiCorresponde(reserva);
     }
 

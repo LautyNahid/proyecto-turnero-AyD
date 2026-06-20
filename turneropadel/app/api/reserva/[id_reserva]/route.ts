@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { routeErrorResponse } from "@/lib/http/rest-response";
 import { reservaService } from "@/lib/services/reserva.service";
 import { requireAuth, getRolUsuario } from "@/lib/auth";
+import { puedeEjecutar } from "@/lib/permissions";
 
 type RouteContext = {
   params: Promise<{ id_reserva: string }>;
@@ -24,10 +25,10 @@ export async function DELETE(_req: Request, context: RouteContext) {
     if (response) return response;
 
     const roles = await getRolUsuario(userId!);
-    const esAdmin = roles?.includes("admin") ?? false;
+    const esPrivilegiado = puedeEjecutar(roles ?? [], "reserva.cancelar.ajena");
 
     const { id_reserva } = await context.params;
-    await reservaService.eliminarReserva(id_reserva, userId!, esAdmin);
+    await reservaService.eliminarReserva(id_reserva, userId!, esPrivilegiado);
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
