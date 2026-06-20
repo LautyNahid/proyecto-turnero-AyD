@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRol } from "@/lib/auth";
+import { requireAccion  } from "@/lib/auth";
 import { reporteService } from "@/lib/services/reporte.service";
 import { routeErrorResponse } from "@/lib/http/rest-response";
 
 export async function POST(request: NextRequest) {
-  const { response } = await requireRol("admin");
+  const { response } = await requireAccion("reporte.generar");
   if (response) return response;
 
   try {

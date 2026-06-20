@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRol } from "@/lib/auth";
+import { requireAccion  } from "@/lib/auth";
 import { reporteService } from "@/lib/services/reporte.service";
 import type { ReporteDatos } from "@/lib/services/reporte.service";
 import { generarExcelReporteSemanal } from "@/lib/reportes/excel";
@@ -15,7 +15,7 @@ function parseFormato(value: string | null): "excel" | "pdf" {
 }
 
 export async function GET(request: NextRequest) {
-  const { response } = await requireRol("admin", "empleado");
+  const { response } = await requireAccion("reporte.exportar");
   if (response) return response;
 
   try {
