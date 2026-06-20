@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { fail } from "@/lib/types";
 import type { Rol } from "@/lib/types";
+import { puedeEjecutar, type Accion } from "@/lib/permissions";
 
 export async function getClerkId(): Promise<string | null> {
   const { userId } = await auth();
@@ -54,6 +55,26 @@ export async function requireRol(...roles: Rol[]) {
 
   const rolesUsuario = await getRolUsuario(userId);
   if (!rolesUsuario || rolesUsuario.length === 0 || !roles.some(rol => rolesUsuario.includes(rol))) {
+    return {
+      userId: null,
+      response: NextResponse.json(fail("Sin permisos"), { status: 403 }),
+    };
+  }
+
+  return { userId, response: null };
+}
+
+export async function requireAccion(accion: Accion) {
+  const { userId } = await auth();
+  if (!userId) {
+    return {
+      userId: null,
+      response: NextResponse.json(fail("No autenticado"), { status: 401 }),
+    };
+  }
+
+  const roles = await getRolUsuario(userId);
+  if (!roles || roles.length === 0 || !puedeEjecutar(roles, accion)) {
     return {
       userId: null,
       response: NextResponse.json(fail("Sin permisos"), { status: 403 }),
