@@ -253,13 +253,12 @@ export function CanchasCrudProvider({ children }: { children: ReactNode }) {
 }
 
 export function CanchasKpi() {
-  const { activeCount, canchas, inactiveCount } = useCanchasCrud();
+  const { activeCount, canchas } = useCanchasCrud();
 
   return (
     <div className="rounded-2xl p-4 shadow-soft bg-card border border-border">
       <div className="text-[11px] opacity-70 font-semibold uppercase tracking-wider">Canchas activas</div>
       <div className="mt-2 text-2xl font-bold">{activeCount}/{canchas.length}</div>
-      <div className="text-xs mt-1 font-semibold text-success">{inactiveCount} inactivas vs ayer</div>
     </div>
   );
 }

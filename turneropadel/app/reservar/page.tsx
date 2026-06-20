@@ -198,6 +198,7 @@ export default function Reservar() {
 
   function handleSelectSlot(cancha: Cancha, turno: Turno | undefined, hora: string) {
     setConfirmed(false);
+    setLobbyCreated(false);
     const precioEstimado = turno
       ? Number(turno.precio)
       : calcularPrecioEstimado(cancha.precio, hora);
