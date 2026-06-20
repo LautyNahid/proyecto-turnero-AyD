@@ -73,6 +73,11 @@ function assertLobbyAbierto(estado: EstadoLobby) {
   if (estado !== "Abierto") throw new Error("El lobby ya no está abierto");
 }
 
+function assertTurnoDelLobbyVigente(turno: { estado_turno: string } | null) {
+  if (!turno) throw new Error("El lobby no tiene un turno vinculado");
+  if (turno.estado_turno === "Finalizado") throw new Error("El turno del lobby ya finalizó");
+}
+
 function assertHayCupos(faltantes: number) {
   if (faltantes <= 0) throw new Error("El partido ya está completo");
 }
@@ -232,6 +237,7 @@ export async function crearSolicitud(
       const lobby = await repo.findLobbyParaValidacion(tx, id_lobby);
       assertLobbyExiste(lobby);
       assertLobbyAbierto(lobby.estado_lobby);
+      assertTurnoDelLobbyVigente(lobby.turno);
       assertHayCupos(lobby.jugadores_faltantes);
 
       if (lobby.id_creador === id_jugador)

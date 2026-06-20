@@ -6,10 +6,16 @@ import * as lobbyService from "@/lib/services/lobby.service";
 type RouteContext = { params: Promise<{ id: string }> };
 
 const ERRORES_422 = [
+  "El lobby no esta abierto",
   "El lobby no está abierto",
+  "El lobby ya no está abierto",
+  "El lobby no tiene un turno vinculado",
+  "El turno del lobby ya finalizó",
   "Ya no hay cupos disponibles en este partido",
   "El organizador no puede solicitar ingreso a su propio lobby",
+  "Ya estas inscripto en este lobby",
   "Ya estás inscripto en este lobby",
+  "Ya tenes una solicitud pendiente para este lobby",
   "Ya tenés una solicitud pendiente para este lobby",
 ];
 
@@ -20,7 +26,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const id_lobby = Number(id);
   if (isNaN(id_lobby)) {
-    return NextResponse.json(fail("ID inválido"), { status: 400 });
+    return NextResponse.json(fail("ID invalido"), { status: 400 });
   }
 
   const result = await lobbyService.listarSolicitudes(id_lobby, userId!);
@@ -42,7 +48,7 @@ export async function POST(_req: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const id_lobby = Number(id);
   if (isNaN(id_lobby)) {
-    return NextResponse.json(fail("ID inválido"), { status: 400 });
+    return NextResponse.json(fail("ID invalido"), { status: 400 });
   }
 
   const result = await lobbyService.crearSolicitud(id_lobby, userId!);

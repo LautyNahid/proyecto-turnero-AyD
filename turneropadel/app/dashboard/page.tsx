@@ -61,7 +61,12 @@ export default function Home() {
       try {
         const res = await fetch("/api/lobby?todos=true");
         const json = await res.json();
-        if (res.ok) setLobbies(json.data as LobbyConRelaciones[]);
+        if (res.ok) {
+          const lobbiesVigentes = (json.data as LobbyConRelaciones[]).filter(
+            (lobby) => lobby.estado_lobby !== "Finalizado" && lobby.turno?.estado_turno !== "Finalizado",
+          );
+          setLobbies(lobbiesVigentes);
+        }
       } catch {
         // silencioso — la sección simplemente no muestra lobbies
       } finally {

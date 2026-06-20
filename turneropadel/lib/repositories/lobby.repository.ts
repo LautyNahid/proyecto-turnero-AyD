@@ -49,7 +49,11 @@ export async function findLobbies(
 ): Promise<LobbyConRelaciones[]> {
   return client.lobby.findMany({
     where: soloAbiertos
-      ? { estado_lobby: "Abierto", jugadores_faltantes: { gt: 0 } }
+      ? {
+          estado_lobby: "Abierto",
+          jugadores_faltantes: { gt: 0 },
+          turno: { is: { estado_turno: { not: "Finalizado" } } },
+        }
       : undefined,
     include: lobbyInclude,
     orderBy: { turno: { fecha: "asc" } },
@@ -78,6 +82,7 @@ export async function findLobbyParaValidacion(
       jugadores_faltantes: true,
       id_turno: true,
       id_reserva: true,
+      turno: { select: { estado_turno: true } },
     },
   });
 }
