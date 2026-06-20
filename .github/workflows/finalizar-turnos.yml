@@ -12,7 +12,6 @@ jobs:
     steps:
       - name: Llamar endpoint de finalizacion
         run: |
-          curl -f -X POST "${{ secrets.APP_URL }}/api/jobs/finalizar-turnos" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
-            -H "Content-Type: application/json" \
-            -w "\nHTTP_STATUS=%{http_code}\n"
+          curl -f -X POST "${{ secrets.VERCEL_APP_URL }}/api/jobs/finalizar-turnos" \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          -H "Content-Type: application/json"
