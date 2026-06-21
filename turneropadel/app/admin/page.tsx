@@ -1,6 +1,7 @@
 import { CanchasCrudProvider, CanchasCrudSection, CanchasKpi } from "@/components/admin/CanchasCrud";
 import { AppShell } from "@/components/layout/AppShell";
 import { BloqueoSection } from "@/components/admin/BloqueoSection";
+import { FinalizarTurnosJobButton } from "@/components/admin/FinalizarTurnosJobButton";
 import { ReservasHoyKpi, TurnosDisponiblesHoyKpi, LobbiesAbiertosHoyKpi } from "@/components/admin/ResumenHoyKpis";
 
 export default function Admin() {
@@ -16,6 +17,8 @@ export default function Admin() {
 
         <div className="space-y-6">
           <div className="space-y-6">
+            <FinalizarTurnosJobButton />
+
             <CanchasCrudSection />
 
             <BloqueoSection />
