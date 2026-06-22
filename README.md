@@ -21,19 +21,22 @@ Sistema integral de gestión de turnos y reservas para complejos de pádel, con 
 ## Instalación y Setup
 
 1. **Clonar el repositorio:**
+
 ```bash
 git clone <repository-url>
 cd proyecto-turnero-AyD/turneropadel
 ```
 
 2. **Instalar dependencias:**
+
 ```bash
 npm install
 # El script postinstall generará el cliente Prisma automáticamente
 ```
 
 3. **Configurar variables de entorno:**
-Copiar `.env.example` a `.env.local` y configurar:
+   Copiar `.env.example` a `.env.local` y configurar:
+
 ```bash
 # Base de datos
 DATABASE_URL="postgresql://..."
@@ -48,6 +51,7 @@ NEXT_PUBLIC_API_URL="http://localhost:3000"
 ```
 
 4. **Ejecutar migraciones Prisma:**
+
 ```bash
 npx prisma migrate dev
 # Para seed de datos (si existe):
@@ -55,6 +59,7 @@ npx prisma migrate dev
 ```
 
 5. **Iniciar servidor de desarrollo:**
+
 ```bash
 npm run dev
 ```
@@ -144,13 +149,13 @@ No requiere acciones manuales después de hacer commit.
 
 Consultar `.env.example` para la lista completa. Variables críticas:
 
-| Variable | Descripción | Requerida |
-|----------|-------------|-----------|
-| `DATABASE_URL` | Conexión PostgreSQL | Sí |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk public key | Sí |
-| `CLERK_SECRET_KEY` | Clerk secret key | Sí |
-| `CLERK_WEBHOOK_SECRET` | Para webhooks de Clerk | Sí |
-| `NEXT_PUBLIC_API_URL` | URL base de la API | Sí |
+| Variable                            | Descripción            | Requerida |
+| ----------------------------------- | ---------------------- | --------- |
+| `DATABASE_URL`                      | Conexión PostgreSQL    | Sí        |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk public key       | Sí        |
+| `CLERK_SECRET_KEY`                  | Clerk secret key       | Sí        |
+| `CLERK_WEBHOOK_SECRET`              | Para webhooks de Clerk | Sí        |
+| `NEXT_PUBLIC_API_URL`               | URL base de la API     | Sí        |
 
 ## Deployment
 
@@ -163,13 +168,4 @@ Para desplegar en producción:
 
 Soporta deployment en Vercel, Railway, Fly.io u otros servicios Node.js.
 
-## Documentación Adicional
 
-- [API Documentation](./Documentacion/C12E4%20-%20APIs.yaml) - Especificación OpenAPI
-- [Estudio de Viabilidad](./Documentacion/EstudioViabilidad/) - Análisis de arquitectura
-- [AGENTS.md](./turneropadel/AGENTS.md) - Configuración de agentes personalizados
-- [CLAUDE.md](./turneropadel/CLAUDE.md) - Instrucciones para desarrollo con IA
-
-## Soporte
-
-Para reportar issues o solicitar features, crear un issue en el repositorio.
